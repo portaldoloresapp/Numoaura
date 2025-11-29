@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { House, Box, User, BarChart2, Plus } from 'lucide-react-native';
+import { House, Box, User, History, Plus } from 'lucide-react-native';
 import { COLORS } from '../../constants/theme';
 
 export default function TabLayout() {
@@ -15,7 +15,6 @@ export default function TabLayout() {
         tabBarActiveTintColor: COLORS.white,
         tabBarInactiveTintColor: '#666',
         tabBarHideOnKeyboard: true,
-        // Força o item a ocupar toda a altura e centralizar o conteúdo
         tabBarItemStyle: {
           justifyContent: 'center',
           alignItems: 'center',
@@ -24,24 +23,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* 1. Home */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Início',
-          tabBarIcon: ({ focused }) => (
-            <View style={styles.iconContainer}>
-                <House 
-                size={26} 
-                color={focused ? COLORS.white : '#888'} 
-                strokeWidth={focused ? 2.5 : 2}
-                />
-            </View>
-          ),
-        }}
-      />
-
-      {/* 2. Caixinhas */}
+      {/* 1. Caixinhas (Esquerda) */}
       <Tabs.Screen
         name="wallet"
         options={{
@@ -49,8 +31,25 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <Box 
-                size={26} 
-                color={focused ? COLORS.white : '#888'} 
+                size={30} 
+                color={focused ? COLORS.white : '#666'} 
+                strokeWidth={focused ? 2.5 : 2}
+                />
+            </View>
+          ),
+        }}
+      />
+
+      {/* 2. Home (Centro-Esquerda) - Ajuste de ordem se necessário, mas mantendo a lógica anterior */}
+       <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Início',
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+                <House 
+                size={30} 
+                color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
             </View>
@@ -80,16 +79,16 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. Estatísticas */}
+      {/* 4. Histórico (Antigo Estatísticas) */}
       <Tabs.Screen
-        name="statistics"
+        name="history"
         options={{
-          title: 'Estatísticas',
+          title: 'Histórico',
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
-                <BarChart2 
-                size={26} 
-                color={focused ? COLORS.white : '#888'} 
+                <History 
+                size={30} 
+                color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
             </View>
@@ -105,8 +104,8 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <User 
-                size={26} 
-                color={focused ? COLORS.white : '#888'} 
+                size={30} 
+                color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
             </View>
@@ -125,14 +124,13 @@ const styles = StyleSheet.create({
     right: 20,
     backgroundColor: '#121212', // Preto profundo
     borderRadius: 40, // Pílula
-    height: 70, // Altura ajustada para ficar mais compacto
+    height: 70, // Altura ajustada
     borderTopWidth: 0,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    // Remove paddings padrão que empurram ícones para cima
     paddingTop: 0,
     paddingBottom: 0,
     alignItems: 'center',
@@ -141,32 +139,30 @@ const styles = StyleSheet.create({
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100%', // Garante que o container do ícone use todo espaço vertical disponível
-    top: Platform.OS === 'ios' ? 10 : 0, // Pequeno ajuste no iOS se necessário, senão 0
+    height: '100%',
+    top: Platform.OS === 'ios' ? 10 : 0,
   },
   centerButtonWrapper: {
-    top: -30, // Faz o botão flutuar para fora da barra
+    top: -35, // Flutua para fora da barra
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    height: 70, // Mantém a área de toque consistente
+    height: 70,
     width: 70,
   },
   centerButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    // Sombra
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 6,
-    // Borda grossa da mesma cor da barra para criar o efeito de recorte
-    borderWidth: 5,
+    borderWidth: 6,
     borderColor: '#121212', 
   },
 });
