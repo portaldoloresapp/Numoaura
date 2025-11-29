@@ -4,7 +4,13 @@ import { COLORS, SPACING } from '../constants/theme';
 import { ArrowDown, ArrowUp, RefreshCw, ChevronRight } from 'lucide-react-native';
 import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
 
-export default function SummaryCard() {
+interface SummaryCardProps {
+  balance: number;
+  income: number;
+  expense: number;
+}
+
+export default function SummaryCard({ balance = 0, income = 0, expense = 0 }: SummaryCardProps) {
   const handleAction = (action: string) => {
     Alert.alert(action, `Você clicou em ${action}`);
   };
@@ -18,13 +24,14 @@ export default function SummaryCard() {
       {/* Header do Card */}
       <View style={styles.topSection}>
         <View>
-          <Text style={styles.label}>Resumo de Ativos</Text>
-          <Text style={styles.balance}>$23.521,32</Text>
+          <Text style={styles.label}>Saldo Atual</Text>
+          <Text style={styles.balance}>
+            {balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </Text>
           <View style={styles.changeContainer}>
-            <Text style={styles.smallBalance}>≈23.521,32</Text>
             <View style={styles.badge}>
               <ArrowUp size={12} color={COLORS.black} />
-              <Text style={styles.badgeText}>16.5%</Text>
+              <Text style={styles.badgeText}>Entradas: {income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
             </View>
           </View>
         </View>
@@ -63,41 +70,25 @@ export default function SummaryCard() {
                 strokeWidth="25"
                 strokeLinecap="round"
             />
-            {/* Colored Segments - Simulated */}
+            {/* Colored Segments - Simulated based on balance health */}
             <Path
-                d="M 30 150 A 120 120 0 0 1 90 65"
+                d="M 30 150 A 120 120 0 0 1 150 30"
                 fill="none"
-                stroke={COLORS.primary} 
+                stroke={balance > 0 ? COLORS.primary : COLORS.danger} 
                 strokeWidth="25"
                 strokeLinecap="round"
             />
-            <Path
-                d="M 95 60 A 120 120 0 0 1 180 40"
-                fill="none"
-                stroke={COLORS.chartCyan}
-                strokeWidth="25"
-                strokeLinecap="round"
-            />
-            <Path
-                d="M 185 40 A 120 120 0 0 1 240 80"
-                fill="none"
-                stroke={COLORS.chartPurple}
-                strokeWidth="25"
-                strokeLinecap="round"
-            />
-
+            
             {/* Icons on Chart */}
             <Circle cx="50" cy="130" r="12" fill={COLORS.black} />
             <G x="44" y="124">
-                <SvgText fill="white" fontSize="10" fontWeight="bold" x="50" y="134" textAnchor="middle">T</SvgText>
+                <SvgText fill="white" fontSize="10" fontWeight="bold" x="50" y="134" textAnchor="middle">$</SvgText>
             </G>
             
             <Circle cx="150" cy="35" r="12" fill={COLORS.black} />
              <G x="145" y="29">
-                 <SvgText fill="white" fontSize="10" fontWeight="bold" x="150" y="39" textAnchor="middle">B</SvgText>
+                 <SvgText fill="white" fontSize="10" fontWeight="bold" x="150" y="39" textAnchor="middle">%</SvgText>
             </G>
-
-            <Circle cx="250" cy="110" r="12" fill={COLORS.black} />
         </Svg>
         
         {/* Botão Central */}
@@ -105,7 +96,7 @@ export default function SummaryCard() {
             style={styles.yourAssetBtn}
             onPress={() => handleAction('Ver Todos os Ativos')}
         >
-            <Text style={styles.yourAssetText}>Seus Ativos</Text>
+            <Text style={styles.yourAssetText}>Meus Gastos</Text>
             <ChevronRight size={16} color={COLORS.textLight} />
         </TouchableOpacity>
       </View>
@@ -134,18 +125,13 @@ const styles = StyleSheet.create({
   balance: {
     color: COLORS.white,
     fontFamily: 'Inter_700Bold',
-    fontSize: 36,
+    fontSize: 32,
     marginBottom: 8,
   },
   changeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  smallBalance: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
   },
   badge: {
     flexDirection: 'row',
@@ -158,7 +144,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 12,
+    fontSize: 10,
     color: COLORS.black,
   },
   actionButtons: {

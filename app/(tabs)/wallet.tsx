@@ -1,58 +1,74 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Alert, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { Box, Plus, Umbrella, Plane, Car, Smartphone } from 'lucide-react-native';
-
-const caixinhas = [
-  { 
-    id: '1', 
-    title: 'Reserva de Emergência', 
-    amount: 'R$ 15.000,00', 
-    goal: 'R$ 20.000', 
-    progress: 0.75, 
-    icon: Umbrella,
-    color: '#E8F5E9', 
-    iconColor: '#2E7D32'
-  },
-  { 
-    id: '2', 
-    title: 'Viagem Europa', 
-    amount: 'R$ 5.250,00', 
-    goal: 'R$ 15.000', 
-    progress: 0.35, 
-    icon: Plane,
-    color: '#E3F2FD', 
-    iconColor: '#1565C0'
-  },
-  { 
-    id: '3', 
-    title: 'Carro Novo', 
-    amount: 'R$ 32.100,00', 
-    goal: 'R$ 80.000', 
-    progress: 0.40, 
-    icon: Car,
-    color: '#FFF3E0', 
-    iconColor: '#EF6C00'
-  },
-  { 
-    id: '4', 
-    title: 'Celular Novo', 
-    amount: 'R$ 2.800,00', 
-    goal: 'R$ 5.000', 
-    progress: 0.56, 
-    icon: Smartphone,
-    color: '#F3E5F5', 
-    iconColor: '#7B1FA2'
-  },
-];
+import { Box, Plus, Umbrella, Plane, Car, Smartphone, Target } from 'lucide-react-native';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { useFocusEffect } from 'expo-router';
+import { Goal } from '../../types';
 
 export default function WalletScreen() {
+  const { user } = useAuth();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchGoals = async () => {
+      if (!user) return;
+      try {
+          const { data, error } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('user_id', user.id);
+            
+          if (error) throw error;
+          if (data) setGoals(data);
+      } catch (error: any) {
+          console.log('Error fetching goals:', error.message);
+      }
+  };
+
+  useFocusEffect(
+      useCallback(() => {
+          fetchGoals();
+      }, [user])
+  );
+
+  const onRefresh = async () => {
+      setRefreshing(true);
+      await fetchGoals();
+      setRefreshing(false);
+  };
+
+  const handleAddGoal = async () => {
+      // Simulação rápida de criação para teste
+      if (!user) return;
+      const newGoal = {
+          user_id: user.id,
+          title: 'Nova Meta',
+          target_amount: 5000,
+          current_amount: 0,
+          icon: 'target',
+          color: '#E0F7FA'
+      };
+
+      const { error } = await supabase.from('goals').insert(newGoal);
+      if (!error) {
+          fetchGoals();
+          Alert.alert('Sucesso', 'Nova caixinha criada!');
+      } else {
+          Alert.alert('Erro', 'Não foi possível criar a caixinha.');
+      }
+  };
+
+  const totalSaved = goals.reduce((acc, curr) => acc + curr.current_amount, 0);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Minhas Caixinhas</Text>
         <TouchableOpacity 
             style={styles.addBtn}
-            onPress={() => Alert.alert('Nova Caixinha', 'Criar nova meta financeira')}
+            onPress={handleAddGoal}
         >
             <Plus size={20} color={COLORS.white} />
         </TouchableOpacity>
@@ -60,31 +76,43 @@ export default function WalletScreen() {
       
       <View style={styles.summary}>
           <Text style={styles.summaryLabel}>Total Guardado</Text>
-          <Text style={styles.summaryValue}>R$ 55.150,00</Text>
+          <Text style={styles.summaryValue}>
+            {totalSaved.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </Text>
       </View>
 
       <FlatList
-        data={caixinhas}
+        data={goals}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} activeOpacity={0.9}>
-                <View style={[styles.iconBox, { backgroundColor: item.color }]}>
-                    <item.icon size={24} color={item.iconColor} />
-                </View>
-                <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <View style={styles.progressBg}>
-                        <View style={[styles.progressFill, { width: `${item.progress * 100}%`, backgroundColor: item.iconColor }]} />
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Você ainda não tem caixinhas.</Text>
+                <Text style={styles.emptySubText}>Toque no + para criar uma meta.</Text>
+            </View>
+        }
+        renderItem={({ item }) => {
+            const progress = item.target_amount > 0 ? item.current_amount / item.target_amount : 0;
+            return (
+                <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+                    <View style={[styles.iconBox, { backgroundColor: item.color || '#EEE' }]}>
+                        <Target size={24} color={COLORS.black} />
                     </View>
-                    <Text style={styles.cardGoal}>Meta: {item.goal}</Text>
-                </View>
-                <View style={styles.amountInfo}>
-                    <Text style={styles.cardAmount}>{item.amount}</Text>
-                    <Text style={styles.percentage}>{(item.progress * 100).toFixed(0)}%</Text>
-                </View>
-            </TouchableOpacity>
-        )}
+                    <View style={styles.cardInfo}>
+                        <Text style={styles.cardTitle}>{item.title}</Text>
+                        <View style={styles.progressBg}>
+                            <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: COLORS.primary }]} />
+                        </View>
+                        <Text style={styles.cardGoal}>Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                    </View>
+                    <View style={styles.amountInfo}>
+                        <Text style={styles.cardAmount}>{item.current_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                        <Text style={styles.percentage}>{(progress * 100).toFixed(0)}%</Text>
+                    </View>
+                </TouchableOpacity>
+            );
+        }}
       />
     </SafeAreaView>
   );
@@ -194,5 +222,19 @@ const styles = StyleSheet.create({
       fontSize: 12,
       fontFamily: 'Inter_600SemiBold',
       color: COLORS.success
+  },
+  emptyContainer: {
+      alignItems: 'center',
+      marginTop: 40
+  },
+  emptyText: {
+      fontSize: 16,
+      fontFamily: 'Inter_600SemiBold',
+      color: COLORS.textSecondary
+  },
+  emptySubText: {
+      fontSize: 14,
+      color: COLORS.textLight,
+      marginTop: 8
   }
 });

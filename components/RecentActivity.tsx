@@ -1,17 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, SPACING } from '../constants/theme';
-import { ShoppingCart, Home, Car, Zap, Utensils } from 'lucide-react-native';
+import { ShoppingCart, Home, Car, Zap, Utensils, DollarSign, Coffee, Gift } from 'lucide-react-native';
+import { Transaction } from '../types';
 
-const activities = [
-  { id: 1, title: 'Supermercado', date: 'Segunda, 25 Jan', amount: '-R$ 20,00', icon: ShoppingCart, color: '#000' },
-  { id: 2, title: 'Aluguel', date: 'Domingo, 24 Jan', amount: '-R$ 500,00', icon: Home, color: '#000' },
-  { id: 3, title: 'Uber', date: 'Sábado, 23 Jan', amount: '-R$ 35,00', icon: Car, color: '#000' },
-  { id: 4, title: 'Conta de Luz', date: 'Quinta, 21 Jan', amount: '-R$ 40,00', icon: Zap, color: '#000' },
-  { id: 5, title: 'Restaurante', date: 'Quarta, 20 Jan', amount: '-R$ 85,00', icon: Utensils, color: '#000' },
-];
+interface RecentActivityProps {
+  transactions: Transaction[];
+}
 
-export default function RecentActivity() {
+const getIcon = (category: string) => {
+    switch(category) {
+        case 'mercado': return ShoppingCart;
+        case 'casa': return Home;
+        case 'transporte': return Car;
+        case 'contas': return Zap;
+        case 'lazer': return Coffee;
+        case 'presentes': return Gift;
+        default: return DollarSign;
+    }
+}
+
+export default function RecentActivity({ transactions }: RecentActivityProps) {
+  if (!transactions || transactions.length === 0) {
+      return (
+          <View style={styles.container}>
+              <Text style={styles.emptyText}>Nenhuma atividade recente.</Text>
+          </View>
+      )
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -20,20 +37,29 @@ export default function RecentActivity() {
       </View>
 
       <View style={styles.listContainer}>
-        {activities.map((item) => (
-          <View key={item.id} style={styles.item}>
-            <View style={styles.left}>
-              <View style={styles.iconContainer}>
-                <item.icon size={20} color={COLORS.white} />
-              </View>
-              <View>
-                <Text style={styles.itemTitle}>{item.title}</Text>
-                <Text style={styles.itemDate}>{item.date}</Text>
-              </View>
+        {transactions.map((item) => {
+          const Icon = getIcon(item.category);
+          const isExpense = item.type === 'expense';
+          
+          return (
+            <View key={item.id} style={styles.item}>
+                <View style={styles.left}>
+                <View style={styles.iconContainer}>
+                    <Icon size={20} color={COLORS.white} />
+                </View>
+                <View>
+                    <Text style={styles.itemTitle}>{item.description || item.category}</Text>
+                    <Text style={styles.itemDate}>
+                        {new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </Text>
+                </View>
+                </View>
+                <Text style={[styles.amount, { color: isExpense ? COLORS.text : COLORS.success }]}>
+                    {isExpense ? '-' : '+'} {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </Text>
             </View>
-            <Text style={styles.amount}>{item.amount}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -41,12 +67,8 @@ export default function RecentActivity() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: SPACING.l,
-    paddingBottom: 100, // Space for bottom tabs
+    marginTop: SPACING.l,
+    marginBottom: SPACING.l,
   },
   header: {
     flexDirection: 'row',
@@ -89,6 +111,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: COLORS.text,
+    textTransform: 'capitalize'
   },
   itemDate: {
     fontSize: 12,
@@ -101,4 +124,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: COLORS.text,
   },
+  emptyText: {
+      textAlign: 'center',
+      color: COLORS.textSecondary,
+      marginTop: SPACING.m,
+      fontStyle: 'italic'
+  }
 });

@@ -1,14 +1,70 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, StatusBar as RNStatusBar, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, StatusBar as RNStatusBar, Alert, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { LayoutGrid, SlidersHorizontal, Plus, ChevronDown } from 'lucide-react-native';
 import SummaryCard from '../../components/SummaryCard';
-import CaixinhasList from '../../components/CaixinhasList';
+import RecentActivity from '../../components/RecentActivity';
 import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { Transaction } from '../../types';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [income, setIncome] = useState(0);
+  const [expense, setExpense] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchData = async () => {
+    if (!user) return;
+    
+    try {
+        // Fetch transactions
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+            setTransactions(data);
+
+            // Calculate totals
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            data.forEach((t: Transaction) => {
+                if (t.type === 'income') totalIncome += t.amount;
+                else totalExpense += t.amount;
+            });
+
+            setIncome(totalIncome);
+            setExpense(totalExpense);
+            setBalance(totalIncome - totalExpense);
+        }
+
+    } catch (error: any) {
+        console.error('Error fetching data:', error.message);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [user])
+  );
+
+  const onRefresh = async () => {
+      setRefreshing(true);
+      await fetchData();
+      setRefreshing(false);
+  };
 
   const handleFeatureNotImplemented = (feature: string) => {
     Alert.alert('Em Breve', `A funcionalidade ${feature} estará disponível na próxima atualização.`);
@@ -26,7 +82,10 @@ export default function HomeScreen() {
         <ScrollView 
           style={styles.scrollView} 
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 130 }} // Padding extra para a NavBar flutuante
+          contentContainerStyle={{ paddingBottom: 130 }}
+          refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.black} />
+          }
         >
           <View style={styles.contentContainer}>
             
@@ -56,16 +115,13 @@ export default function HomeScreen() {
                     onPress={() => router.push('/(tabs)/profile')}
                  >
                     <Image 
-                        source={{ uri: 'https://i.pravatar.cc/150?u=jacob' }} 
+                        source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
                         style={styles.avatar} 
                     />
-                    <View style={styles.notificationDot}>
-                        <Text style={styles.notifText}>4</Text>
-                    </View>
                  </TouchableOpacity>
                  <TouchableOpacity 
                     style={styles.plusBtn}
-                    onPress={() => router.push('/budget-modal')}
+                    onPress={() => router.push('/add-transaction')}
                  >
                     <Plus size={20} color={COLORS.white} />
                  </TouchableOpacity>
@@ -81,16 +137,18 @@ export default function HomeScreen() {
                     <Text style={styles.walletText}>Conta Principal</Text>
                     <ChevronDown size={16} color={COLORS.black} />
                 </TouchableOpacity>
-                <Text style={styles.welcomeText}>Olá, Jacob</Text>
+                <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
             </View>
 
             {/* Main Summary Card */}
-            <SummaryCard />
+            <SummaryCard balance={balance} income={income} expense={expense} />
 
           </View>
 
-          {/* Caixinhas Section (Nubank Style) */}
-          <CaixinhasList />
+          {/* Recent Activity Section */}
+          <View style={{ paddingHorizontal: SPACING.l }}>
+            <RecentActivity transactions={transactions} />
+          </View>
 
         </ScrollView>
       </SafeAreaView>
@@ -181,24 +239,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     borderColor: COLORS.primary
-  },
-  notificationDot: {
-      position: 'absolute',
-      top: -4,
-      left: -4,
-      backgroundColor: COLORS.black,
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: '#555'
-  },
-  notifText: {
-      color: COLORS.white,
-      fontSize: 8,
-      fontFamily: 'Inter_700Bold'
   },
   plusBtn: {
       width: 36,

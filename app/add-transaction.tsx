@@ -1,27 +1,59 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
-import { X, ArrowUpCircle, ArrowDownCircle, ShoppingCart, Home, Car, Zap, Coffee, Gift, DollarSign } from 'lucide-react-native';
+import { X, ArrowUpCircle, ArrowDownCircle, ShoppingCart, Home, Car, Zap, Coffee, Gift } from 'lucide-react-native';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const categories = [
-  { id: 1, name: 'Mercado', icon: ShoppingCart },
-  { id: 2, name: 'Casa', icon: Home },
-  { id: 3, name: 'Transporte', icon: Car },
-  { id: 4, name: 'Contas', icon: Zap },
-  { id: 5, name: 'Lazer', icon: Coffee },
-  { id: 6, name: 'Presentes', icon: Gift },
+  { id: 1, name: 'Mercado', icon: ShoppingCart, slug: 'mercado' },
+  { id: 2, name: 'Casa', icon: Home, slug: 'casa' },
+  { id: 3, name: 'Transporte', icon: Car, slug: 'transporte' },
+  { id: 4, name: 'Contas', icon: Zap, slug: 'contas' },
+  { id: 5, name: 'Lazer', icon: Coffee, slug: 'lazer' },
+  { id: 6, name: 'Presentes', icon: Gift, slug: 'presentes' },
 ];
 
 export default function AddTransactionScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
-    // Aqui entraria a lógica para salvar no banco de dados
-    router.back();
+  const handleSave = async () => {
+    if (!amount || !selectedCategory || !user) {
+      Alert.alert('Atenção', 'Preencha o valor e selecione uma categoria.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Converter valor para número (substituindo vírgula por ponto)
+      const numericAmount = parseFloat(amount.replace(',', '.'));
+      
+      const categorySlug = categories.find(c => c.id === selectedCategory)?.slug || 'outros';
+
+      const { error } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        amount: numericAmount,
+        type: type,
+        category: categorySlug,
+        description: categories.find(c => c.id === selectedCategory)?.name,
+      });
+
+      if (error) throw error;
+
+      Alert.alert('Sucesso', 'Transação registrada!');
+      router.back();
+    } catch (error: any) {
+      Alert.alert('Erro', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,8 +129,16 @@ export default function AddTransactionScreen() {
 
         {/* Save Button */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-            <Text style={styles.saveBtnText}>Adicionar {type === 'expense' ? 'Gasto' : 'Ganho'}</Text>
+          <TouchableOpacity 
+            style={[styles.saveBtn, loading && { opacity: 0.7 }]} 
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.saveBtnText}>Adicionar {type === 'expense' ? 'Gasto' : 'Ganho'}</Text>
+            )}
           </TouchableOpacity>
         </View>
 

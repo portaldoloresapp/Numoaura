@@ -1,23 +1,37 @@
 import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Settings, LogOut, ChevronRight, User } from 'lucide-react-native';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProfileScreen() {
+  const { signOut, user } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Sair",
+      "Tem certeza que deseja sair?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sair", style: "destructive", onPress: signOut }
+      ]
+    );
+  };
+
   const menuItems = [
-      { id: 1, label: 'Dados Pessoais', icon: User },
-      { id: 2, label: 'Configurações', icon: Settings },
-      { id: 3, label: 'Sair', icon: LogOut, color: COLORS.danger },
+      { id: 1, label: 'Dados Pessoais', icon: User, action: () => {} },
+      { id: 2, label: 'Configurações', icon: Settings, action: () => {} },
+      { id: 3, label: 'Sair', icon: LogOut, color: COLORS.danger, action: handleLogout },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
         <View style={styles.header}>
             <Image 
-                source={{ uri: 'https://i.pravatar.cc/150?u=jacob' }} 
+                source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
                 style={styles.avatar} 
             />
-            <Text style={styles.name}>Jacob Jones</Text>
-            <Text style={styles.email}>jacob.jones@email.com</Text>
+            <Text style={styles.name}>{user?.user_metadata?.full_name || 'Usuário'}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
         </View>
 
         <View style={styles.menu}>
@@ -25,7 +39,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity 
                     key={item.id} 
                     style={styles.menuItem}
-                    onPress={() => Alert.alert(item.label, `Ação: ${item.label}`)}
+                    onPress={item.action}
                 >
                     <View style={styles.menuLeft}>
                         <View style={styles.iconBox}>
@@ -58,7 +72,8 @@ const styles = StyleSheet.create({
       borderRadius: 50,
       marginBottom: SPACING.m,
       borderWidth: 3,
-      borderColor: COLORS.primary
+      borderColor: COLORS.primary,
+      backgroundColor: '#EEE'
   },
   name: {
       fontSize: 20,
