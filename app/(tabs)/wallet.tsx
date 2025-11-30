@@ -1,17 +1,21 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { Box, Plus, Target } from 'lucide-react-native';
+import { Plus, Target } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Goal } from '../../types';
+import Animated, { FadeInDown, Layout, FadeOut } from 'react-native-reanimated';
+import AnimatedTouchable from '../../components/AnimatedTouchable';
+import Skeleton from '../../components/Skeleton';
 
 export default function WalletScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchGoals = async () => {
       if (!user) return;
@@ -26,6 +30,8 @@ export default function WalletScreen() {
           if (data) setGoals(data);
       } catch (error: any) {
           console.log('Error fetching goals:', error.message);
+      } finally {
+          setLoading(false);
       }
   };
 
@@ -44,7 +50,6 @@ export default function WalletScreen() {
   const handleAddGoal = async () => {
       if (!user) return;
       
-      // Criando uma meta padrão para o usuário editar depois
       const newGoal = {
           user_id: user.id,
           title: 'Nova Meta',
@@ -61,7 +66,8 @@ export default function WalletScreen() {
         .single();
 
       if (!error && data) {
-          // Redireciona direto para a edição da nova meta
+          // Adiciona localmente para animação imediata
+          setGoals([data, ...goals]);
           router.push(`/goal/${data.id}`);
       } else {
           Alert.alert('Erro', 'Não foi possível criar a caixinha.');
@@ -70,62 +76,86 @@ export default function WalletScreen() {
 
   const totalSaved = goals.reduce((acc, curr) => acc + curr.current_amount, 0);
 
+  const renderItem = ({ item, index }: { item: Goal, index: number }) => {
+    const progress = item.target_amount > 0 ? item.current_amount / item.target_amount : 0;
+    
+    return (
+        <Animated.View 
+            entering={FadeInDown.delay(index * 100).springify()} 
+            exiting={FadeOut}
+            layout={Layout.springify()}
+        >
+            <AnimatedTouchable 
+                style={styles.card} 
+                onPress={() => router.push(`/goal/${item.id}`)}
+            >
+                <View style={[styles.iconBox, { backgroundColor: item.color || '#EEE' }]}>
+                    <Target size={24} color={COLORS.black} />
+                </View>
+                <View style={styles.cardInfo}>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <View style={styles.progressBg}>
+                        <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: COLORS.primary }]} />
+                    </View>
+                    <Text style={styles.cardGoal}>Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                </View>
+                <View style={styles.amountInfo}>
+                    <Text style={styles.cardAmount}>{item.current_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                    <Text style={styles.percentage}>{(progress * 100).toFixed(0)}%</Text>
+                </View>
+            </AnimatedTouchable>
+        </Animated.View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Minhas Caixinhas</Text>
-        <TouchableOpacity 
+        <AnimatedTouchable 
             style={styles.addBtn}
             onPress={handleAddGoal}
         >
             <Plus size={20} color={COLORS.white} />
-        </TouchableOpacity>
+        </AnimatedTouchable>
       </View>
       
       <View style={styles.summary}>
           <Text style={styles.summaryLabel}>Total Guardado</Text>
-          <Text style={styles.summaryValue}>
-            {totalSaved.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-          </Text>
+          {loading ? (
+              <Skeleton width={150} height={40} style={{ marginTop: 4 }} />
+          ) : (
+              <Animated.Text 
+                entering={FadeInDown.duration(500)}
+                style={styles.summaryValue}
+              >
+                {totalSaved.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </Animated.Text>
+          )}
       </View>
 
-      <FlatList
-        data={goals}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Você ainda não tem caixinhas.</Text>
-                <Text style={styles.emptySubText}>Toque no + para criar uma meta.</Text>
-            </View>
-        }
-        renderItem={({ item }) => {
-            const progress = item.target_amount > 0 ? item.current_amount / item.target_amount : 0;
-            return (
-                <TouchableOpacity 
-                    style={styles.card} 
-                    activeOpacity={0.7}
-                    onPress={() => router.push(`/goal/${item.id}`)}
-                >
-                    <View style={[styles.iconBox, { backgroundColor: item.color || '#EEE' }]}>
-                        <Target size={24} color={COLORS.black} />
-                    </View>
-                    <View style={styles.cardInfo}>
-                        <Text style={styles.cardTitle}>{item.title}</Text>
-                        <View style={styles.progressBg}>
-                            <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: COLORS.primary }]} />
-                        </View>
-                        <Text style={styles.cardGoal}>Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
-                    </View>
-                    <View style={styles.amountInfo}>
-                        <Text style={styles.cardAmount}>{item.current_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
-                        <Text style={styles.percentage}>{(progress * 100).toFixed(0)}%</Text>
-                    </View>
-                </TouchableOpacity>
-            );
-        }}
-      />
+      {loading ? (
+          <View style={styles.listContent}>
+              <Skeleton height={80} borderRadius={20} />
+              <Skeleton height={80} borderRadius={20} />
+              <Skeleton height={80} borderRadius={20} />
+          </View>
+      ) : (
+        <Animated.FlatList
+            data={goals}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            renderItem={renderItem}
+            itemLayoutAnimation={Layout.springify()}
+            ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>Você ainda não tem caixinhas.</Text>
+                    <Text style={styles.emptySubText}>Toque no + para criar uma meta.</Text>
+                </View>
+            }
+        />
+      )}
     </SafeAreaView>
   );
 }

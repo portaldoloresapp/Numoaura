@@ -5,6 +5,8 @@ import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
 import { Mail, Lock, ArrowRight, Command } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import AnimatedTouchable from '../../components/AnimatedTouchable';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -59,20 +61,20 @@ export default function LoginScreen() {
         <View style={styles.content}>
             
             {/* App Logo Section */}
-            <View style={styles.logoContainer}>
+            <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.logoContainer}>
                 <View style={styles.logoBox}>
                     <Command size={40} color={COLORS.black} />
                 </View>
                 <Text style={styles.appName}>Numoaura</Text>
-            </View>
+            </Animated.View>
 
-            <View style={styles.header}>
+            <Animated.View entering={FadeInDown.delay(100).duration(800).springify()} style={styles.header}>
                 <Text style={styles.title}>Bem-vindo de volta</Text>
                 <Text style={styles.subtitle}>Entre para gerenciar suas finanças</Text>
-            </View>
+            </Animated.View>
 
             <View style={styles.form}>
-            <View style={styles.inputContainer}>
+            <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.inputContainer}>
                 <Mail size={20} color={COLORS.textSecondary} />
                 <TextInput
                 style={styles.input}
@@ -83,9 +85,9 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 />
-            </View>
+            </Animated.View>
 
-            <View style={styles.inputContainer}>
+            <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.inputContainer}>
                 <Lock size={20} color={COLORS.textSecondary} />
                 <TextInput
                 style={styles.input}
@@ -95,27 +97,29 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry
                 />
-            </View>
+            </Animated.View>
 
-            <TouchableOpacity style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
-                {loading ? (
-                <ActivityIndicator color={COLORS.black} />
-                ) : (
-                <View style={styles.btnContent}>
-                    <Text style={styles.loginBtnText}>Entrar</Text>
-                    <ArrowRight size={20} color={COLORS.black} />
-                </View>
-                )}
-            </TouchableOpacity>
+            <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
+                <AnimatedTouchable style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
+                    {loading ? (
+                    <ActivityIndicator color={COLORS.black} />
+                    ) : (
+                    <View style={styles.btnContent}>
+                        <Text style={styles.loginBtnText}>Entrar</Text>
+                        <ArrowRight size={20} color={COLORS.black} />
+                    </View>
+                    )}
+                </AnimatedTouchable>
+            </Animated.View>
 
-            <View style={styles.footer}>
+            <Animated.View entering={FadeInUp.delay(500).duration(800).springify()} style={styles.footer}>
                 <Text style={styles.footerText}>Não tem uma conta? </Text>
                 <Link href="/auth/signup" asChild>
                 <TouchableOpacity>
                     <Text style={styles.linkText}>Cadastre-se</Text>
                 </TouchableOpacity>
                 </Link>
-            </View>
+            </Animated.View>
             </View>
         </View>
       </ScrollView>

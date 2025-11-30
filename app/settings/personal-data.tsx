@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
-import { ArrowLeft, User, Lock, Save, Mail, Link as LinkIcon, Check, X, Image as ImageIcon } from 'lucide-react-native';
+import { ArrowLeft, User, Lock, Save, Link as LinkIcon, Check, X, Image as ImageIcon } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 
@@ -128,26 +128,6 @@ export default function PersonalDataScreen() {
     } finally {
       setLoadingPassword(false);
     }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!user?.email) return;
-    
-    Alert.alert(
-      'Redefinir Senha',
-      `Enviaremos um e-mail para ${user.email} com instruções.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Enviar', 
-          onPress: async () => {
-            const { error } = await supabase.auth.resetPasswordForEmail(user.email!);
-            if (error) Alert.alert('Erro', error.message);
-            else Alert.alert('E-mail enviado', 'Verifique sua caixa de entrada.');
-          }
-        }
-      ]
-    );
   };
 
   return (
@@ -285,11 +265,6 @@ export default function PersonalDataScreen() {
                 <Text style={styles.saveBtnText}>Atualizar Senha</Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.forgotBtn} onPress={handleForgotPassword}>
-              <Mail size={16} color={COLORS.primary} />
-              <Text style={styles.forgotText}>Esqueci minha senha</Text>
-            </TouchableOpacity>
           </View>
 
         </ScrollView>
@@ -348,7 +323,7 @@ const styles = StyleSheet.create({
   imageActions: {
       position: 'absolute',
       bottom: 0,
-      right: 0, // Centralizado à direita inferior
+      right: 0,
   },
   actionBtnCircle: {
     backgroundColor: COLORS.black,
@@ -464,19 +439,5 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.gray,
     marginVertical: SPACING.l,
-  },
-  forgotBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.m,
-    gap: 8,
-  },
-  forgotText: {
-    color: COLORS.primary,
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-    textDecorationColor: COLORS.primary
   },
 });

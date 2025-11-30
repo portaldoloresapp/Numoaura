@@ -28,7 +28,7 @@ export default function ProfileScreen() {
         id: 1, 
         label: 'Dados Pessoais', 
         icon: User, 
-        action: () => router.push('/settings/personal-data') // Rota atualizada
+        action: () => router.push('/settings/personal-data') 
       },
       { 
         id: 2, 
@@ -47,9 +47,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-        {/* Barra Superior com Botão Voltar */}
+        {/* Barra Superior com Botão Voltar corrigido para o Menu */}
         <View style={styles.topBar}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/menu')} style={styles.backBtn}>
                 <ArrowLeft size={24} color={COLORS.black} />
             </TouchableOpacity>
             <Text style={styles.screenTitle}>Meu Perfil</Text>

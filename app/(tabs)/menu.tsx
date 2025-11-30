@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING } from '../../constants/theme';
 import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, Shield, HelpCircle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import LogoutModal from '../../components/LogoutModal';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
+import AnimatedTouchable from '../../components/AnimatedTouchable';
 
 export default function MenuScreen() {
   const router = useRouter();
@@ -52,7 +54,10 @@ export default function MenuScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Header Simplificado */}
-        <View style={styles.header}>
+        <Animated.View 
+            entering={FadeInDown.duration(600).springify()} 
+            style={styles.header}
+        >
             <Image 
                 source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
                 style={styles.avatar} 
@@ -61,15 +66,20 @@ export default function MenuScreen() {
                 <Text style={styles.name}>{user?.user_metadata?.full_name || 'Usuário'}</Text>
                 <Text style={styles.email}>{user?.email}</Text>
             </View>
-        </View>
+        </Animated.View>
 
         {/* Menu Sections */}
         {menuItems.map((section, index) => (
-          <View key={index} style={styles.section}>
+          <Animated.View 
+            key={index} 
+            style={styles.section}
+            entering={FadeInDown.delay((index + 1) * 150).duration(600).springify()}
+            layout={Layout.springify()}
+          >
             <Text style={styles.sectionTitle}>{section.section}</Text>
             <View style={styles.sectionContent}>
               {section.items.map((item: any, idx) => (
-                <TouchableOpacity 
+                <AnimatedTouchable 
                   key={item.id} 
                   style={[
                     styles.menuItem, 
@@ -82,7 +92,6 @@ export default function MenuScreen() {
                       item.action();
                     }
                   }}
-                  activeOpacity={0.7}
                 >
                   <View style={styles.menuLeft}>
                     <View style={styles.iconBox}>
@@ -91,23 +100,31 @@ export default function MenuScreen() {
                     <Text style={styles.menuText}>{item.label}</Text>
                   </View>
                   <ChevronRight size={20} color={COLORS.textLight} />
-                </TouchableOpacity>
+                </AnimatedTouchable>
               ))}
             </View>
-          </View>
+          </Animated.View>
         ))}
 
         {/* Logout Button */}
-        <TouchableOpacity 
-            style={styles.logoutBtn} 
-            onPress={handleLogoutPress}
-            activeOpacity={0.8}
+        <Animated.View 
+            entering={FadeInDown.delay(500).duration(600).springify()}
         >
-            <LogOut size={20} color={COLORS.danger} />
-            <Text style={styles.logoutText}>Sair da Conta</Text>
-        </TouchableOpacity>
+            <AnimatedTouchable 
+                style={styles.logoutBtn} 
+                onPress={handleLogoutPress}
+            >
+                <LogOut size={20} color={COLORS.danger} />
+                <Text style={styles.logoutText}>Sair da Conta</Text>
+            </AnimatedTouchable>
+        </Animated.View>
 
-        <Text style={styles.version}>Versão 1.2.1</Text>
+        <Animated.Text 
+            entering={FadeInDown.delay(600).duration(600)}
+            style={styles.version}
+        >
+            Versão 1.2.1
+        </Animated.Text>
 
       </ScrollView>
 

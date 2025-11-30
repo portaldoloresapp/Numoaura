@@ -86,10 +86,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContainer: {
-    width: width * 0.85,
+    width: width * 0.9, 
+    maxWidth: 360, // Limite máximo para consistência
     backgroundColor: COLORS.white,
     borderRadius: 28,
-    padding: SPACING.xl,
+    paddingHorizontal: SPACING.l, 
+    paddingVertical: SPACING.xl,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
@@ -120,11 +122,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SPACING.l,
     lineHeight: 20,
+    paddingHorizontal: SPACING.s,
   },
   buttonRow: {
     flexDirection: 'row',
     gap: SPACING.m,
     width: '100%',
+    marginTop: SPACING.s,
   },
   cancelButton: {
     flex: 1,

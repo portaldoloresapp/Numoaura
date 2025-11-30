@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, SPACING } from '../constants/theme';
-import { ShoppingCart, Home, Car, Zap, Utensils, DollarSign, Coffee, Gift } from 'lucide-react-native';
+import { ShoppingCart, Home, Car, Zap, Coffee, Gift, DollarSign } from 'lucide-react-native';
 import { Transaction } from '../types';
+import Animated, { FadeInRight, Layout } from 'react-native-reanimated';
 
 interface RecentActivityProps {
   transactions: Transaction[];
@@ -37,27 +38,34 @@ export default function RecentActivity({ transactions }: RecentActivityProps) {
       </View>
 
       <View style={styles.listContainer}>
-        {transactions.map((item) => {
+        {transactions.map((item, index) => {
           const Icon = getIcon(item.category);
           const isExpense = item.type === 'expense';
           
           return (
-            <View key={item.id} style={styles.item}>
+            <Animated.View 
+                key={item.id} 
+                style={styles.item}
+                entering={FadeInRight.delay(index * 50).springify()}
+                layout={Layout.springify()}
+            >
                 <View style={styles.left}>
-                <View style={styles.iconContainer}>
-                    <Icon size={20} color={COLORS.white} />
-                </View>
-                <View>
-                    <Text style={styles.itemTitle}>{item.description || item.category}</Text>
-                    <Text style={styles.itemDate}>
-                        {new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                    </Text>
-                </View>
+                    <View style={styles.iconContainer}>
+                        <Icon size={20} color={COLORS.white} />
+                    </View>
+                    <View style={styles.textContainer}>
+                        <Text style={styles.itemTitle} numberOfLines={1} ellipsizeMode="tail">
+                            {item.description || item.category}
+                        </Text>
+                        <Text style={styles.itemDate}>
+                            {new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        </Text>
+                    </View>
                 </View>
                 <Text style={[styles.amount, { color: isExpense ? COLORS.text : COLORS.success }]}>
                     {isExpense ? '-' : '+'} {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </Text>
-            </View>
+            </Animated.View>
           );
         })}
       </View>
@@ -93,11 +101,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    marginRight: 8,
   },
   iconContainer: {
     width: 40,
@@ -106,6 +117,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
+  },
+  textContainer: {
+    flex: 1,
   },
   itemTitle: {
     fontSize: 14,
@@ -123,6 +138,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_700Bold',
     color: COLORS.text,
+    flexShrink: 0,
+    textAlign: 'right',
   },
   emptyText: {
       textAlign: 'center',

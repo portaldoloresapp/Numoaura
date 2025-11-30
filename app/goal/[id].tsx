@@ -122,12 +122,53 @@ export default function GoalDetailsScreen() {
 
     setProcessing(true);
     try {
-      // 1. Calcular novo saldo da caixinha
+      // VERIFICAÇÃO DE RESGATE TOTAL
+      // Se for saque e o valor for igual (ou muito próximo) ao saldo total
+      const isFullWithdrawal = transactionMode === 'withdraw' && Math.abs(value - goal.current_amount) < 0.01;
+
+      if (isFullWithdrawal) {
+          // 1. Registrar Transação de Entrada (Reembolso para conta principal)
+          const { error: transError } = await supabase
+            .from('transactions')
+            .insert({
+                user_id: user.id,
+                amount: value,
+                type: 'income', // Entra como dinheiro na conta
+                category: 'investimento',
+                description: `Resgate Final: ${goal.title}`,
+                created_at: new Date().toISOString()
+            });
+
+          if (transError) throw transError;
+
+          // 2. Excluir a Caixinha Automaticamente
+          const { error: deleteError } = await supabase
+            .from('goals')
+            .delete()
+            .eq('id', id);
+
+          if (deleteError) throw deleteError;
+
+          // UX Melhorada: Navegar apenas após o usuário confirmar a leitura do alerta
+          Alert.alert(
+              'Caixinha Encerrada', 
+              `Você resgatou todo o valor (R$ ${value.toFixed(2)}). A caixinha foi encerrada com sucesso.`,
+              [
+                  { 
+                      text: 'OK', 
+                      onPress: () => router.back() 
+                  }
+              ]
+          );
+          return;
+      }
+
+      // LÓGICA PADRÃO (Depósito ou Resgate Parcial)
       const newAmount = transactionMode === 'deposit' 
         ? goal.current_amount + value 
         : goal.current_amount - value;
 
-      // 2. Atualizar a Caixinha (Goal)
+      // 1. Atualizar Saldo da Caixinha
       const { error: goalError } = await supabase
         .from('goals')
         .update({ current_amount: newAmount })
@@ -135,11 +176,11 @@ export default function GoalDetailsScreen() {
 
       if (goalError) throw goalError;
 
-      // 3. Criar registro na tabela de Transações (Saldo Principal)
+      // 2. Criar registro na tabela de Transações
       const transactionType = transactionMode === 'deposit' ? 'expense' : 'income';
       const description = transactionMode === 'deposit' 
         ? `Depósito: ${goal.title}` 
-        : `Resgate: ${goal.title}`;
+        : `Resgate Parcial: ${goal.title}`;
 
       const { error: transactionError } = await supabase
         .from('transactions')
@@ -167,20 +208,20 @@ export default function GoalDetailsScreen() {
             : `R$ ${value.toFixed(2)} resgatados!`
       );
 
-    } catch (error) {
-      Alert.alert('Erro', 'Falha ao processar transação.');
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Falha ao processar transação.');
     } finally {
       setProcessing(false);
     }
   };
 
-  // Função chamada ao clicar no botão de lixeira
+  // Função chamada ao clicar no botão de lixeira (Exclusão Manual)
   const handleDeletePress = () => {
       if (!goal) return;
       setDeleteModalVisible(true);
   }
 
-  // Função chamada ao confirmar no modal
+  // Função chamada ao confirmar no modal de exclusão manual
   const confirmDelete = async () => {
       if (!goal || !user) return;
 
@@ -193,47 +234,33 @@ export default function GoalDetailsScreen() {
                 .insert({
                     user_id: user.id,
                     amount: goal.current_amount,
-                    type: 'income', // Entra como receita na conta principal
+                    type: 'income',
                     category: 'investimento',
-                    description: `Resgate: ${goal.title}`, // Nome limpo no extrato
+                    description: `Resgate: ${goal.title}`,
                     created_at: new Date().toISOString()
                 });
 
               if (refundError) throw refundError;
           }
 
-          // 2. EXCLUIR A CAIXINHA (Remove Nome, Meta, Icone, Tudo do banco de dados)
+          // 2. EXCLUIR A CAIXINHA
           const { error } = await supabase.from('goals').delete().eq('id', id);
           
           if (error) throw error;
           
           setDeleteModalVisible(false);
           
-          // 3. FEEDBACK E NAVEGAÇÃO
-          // Usamos setTimeout para garantir que o modal feche visualmente antes do Alert aparecer
           setTimeout(() => {
-              if (goal.current_amount > 0) {
-                 Alert.alert(
-                     'Caixinha Excluída', 
-                     `A caixinha foi removida e o saldo de R$ ${goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foi devolvido à sua conta principal.`,
-                     [
-                         { text: 'OK', onPress: () => router.back() }
-                     ]
-                 );
-              } else {
-                 Alert.alert(
-                     'Caixinha Excluída', 
-                     'A meta foi removida permanentemente.',
-                     [
-                         { text: 'OK', onPress: () => router.back() }
-                     ]
-                 );
-              }
+             Alert.alert(
+                 'Caixinha Excluída', 
+                 'Item removido com sucesso.',
+                 [{ text: 'OK', onPress: () => router.back() }]
+             );
           }, 300);
 
       } catch (error: any) {
           console.error(error);
-          Alert.alert('Erro', 'Não foi possível excluir a caixinha. Tente novamente.');
+          Alert.alert('Erro', 'Não foi possível excluir a caixinha.');
       } finally {
           setDeleting(false);
       }
@@ -410,7 +437,11 @@ export default function GoalDetailsScreen() {
                   <Text style={[
                     styles.confirmText,
                     { color: transactionMode === 'deposit' ? COLORS.black : COLORS.white }
-                  ]}>Confirmar</Text>
+                  ]}>
+                    {transactionMode === 'withdraw' && parseFloat(amount.replace(',', '.') || '0') >= goal.current_amount 
+                        ? 'Resgatar Tudo e Encerrar' 
+                        : 'Confirmar'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

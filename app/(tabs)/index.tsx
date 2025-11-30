@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, StatusBar as RNStatusBar, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { LayoutGrid, SlidersHorizontal, Plus, ChevronDown } from 'lucide-react-native';
 import SummaryCard from '../../components/SummaryCard';
@@ -11,6 +11,9 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
 import { Transaction } from '../../types';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import AnimatedTouchable from '../../components/AnimatedTouchable';
+import Skeleton from '../../components/Skeleton';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -22,6 +25,7 @@ export default function HomeScreen() {
   const [income, setIncome] = useState(0);
   const [expense, setExpense] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     if (!user) return;
@@ -53,6 +57,8 @@ export default function HomeScreen() {
 
     } catch (error: any) {
         console.error('Error fetching data:', error.message);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -66,18 +72,6 @@ export default function HomeScreen() {
       setRefreshing(true);
       await fetchData();
       setRefreshing(false);
-  };
-
-  const handleAccountSelect = () => {
-    Alert.alert(
-      "Selecionar Conta",
-      "Escolha qual conta deseja visualizar",
-      [
-        { text: "Conta Principal", onPress: () => console.log("Já na conta principal") },
-        { text: "Ver Caixinhas", onPress: () => router.push('/(tabs)/wallet') },
-        { text: "Cancelar", style: "cancel" }
-      ]
-    );
   };
 
   return (
@@ -96,24 +90,24 @@ export default function HomeScreen() {
           <View style={styles.contentContainer}>
             
             {/* Header */}
-            <View style={styles.header}>
+            <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.header}>
               <View style={styles.leftHeader}>
-                <TouchableOpacity 
+                <AnimatedTouchable 
                   style={styles.iconBtn} 
                   onPress={() => router.push('/(tabs)/menu')}
                 >
                   <LayoutGrid size={24} color={COLORS.black} />
-                </TouchableOpacity>
-                <TouchableOpacity 
+                </AnimatedTouchable>
+                <AnimatedTouchable 
                   style={styles.iconBtn}
                   onPress={() => router.push('/settings/home-config')}
                 >
                   <SlidersHorizontal size={24} color={COLORS.black} />
-                </TouchableOpacity>
+                </AnimatedTouchable>
               </View>
 
               <View style={styles.rightHeader}>
-                 <TouchableOpacity 
+                 <AnimatedTouchable 
                     style={styles.profileContainer}
                     onPress={() => router.push('/(tabs)/profile')}
                  >
@@ -121,57 +115,69 @@ export default function HomeScreen() {
                         source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
                         style={styles.avatar} 
                     />
-                 </TouchableOpacity>
-                 <TouchableOpacity 
+                 </AnimatedTouchable>
+                 <AnimatedTouchable 
                     style={styles.plusBtn}
                     onPress={() => router.push('/add-transaction')}
                  >
                     <Plus size={20} color={COLORS.white} />
-                 </TouchableOpacity>
+                 </AnimatedTouchable>
               </View>
-            </View>
+            </Animated.View>
 
             {/* Sub Header Info */}
-            <View style={styles.subHeader}>
-                <TouchableOpacity 
+            <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.subHeader}>
+                <AnimatedTouchable 
                   style={styles.walletSelector}
-                  onPress={handleAccountSelect}
+                  onPress={() => {}}
                 >
                     <Text style={styles.walletText}>Conta Principal</Text>
                     <ChevronDown size={16} color={COLORS.black} />
-                </TouchableOpacity>
+                </AnimatedTouchable>
                 <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
-            </View>
+            </Animated.View>
 
             {/* Main Summary Card */}
-            {visibleWidgets.summary && (
-                <SummaryCard balance={balance} income={income} expense={expense} />
+            {loading ? (
+              <View style={{ marginTop: SPACING.s }}>
+                 <Skeleton height={200} borderRadius={32} />
+              </View>
+            ) : (
+              visibleWidgets.summary && (
+                  <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+                    <SummaryCard balance={balance} income={income} expense={expense} />
+                  </Animated.View>
+              )
             )}
             
             {/* Action Grid */}
             {visibleWidgets.actions && (
-                <View style={{ marginTop: SPACING.l }}>
+                <Animated.View 
+                  entering={FadeInDown.delay(300).duration(600).springify()}
+                  style={{ marginTop: SPACING.l }}
+                >
                     <ActionGrid />
-                </View>
+                </Animated.View>
             )}
 
           </View>
 
           {/* Recent Activity Section */}
           {visibleWidgets.recent_activity && (
-              <View style={{ paddingHorizontal: SPACING.l }}>
-                <RecentActivity transactions={transactions} />
-              </View>
-          )}
-
-          {/* Empty State */}
-          {!visibleWidgets.summary && !visibleWidgets.actions && !visibleWidgets.recent_activity && (
-              <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>Sua tela inicial está limpa.</Text>
-                  <TouchableOpacity onPress={() => router.push('/settings/home-config')}>
-                      <Text style={styles.emptyStateLink}>Configurar visualização</Text>
-                  </TouchableOpacity>
-              </View>
+              <Animated.View 
+                entering={FadeInUp.delay(400).duration(600).springify()}
+                style={{ paddingHorizontal: SPACING.l }}
+              >
+                {loading ? (
+                  <View style={{ gap: 16, marginTop: 16 }}>
+                    <Skeleton height={60} borderRadius={16} />
+                    <Skeleton height={60} borderRadius={16} />
+                    <Skeleton height={60} borderRadius={16} />
+                  </View>
+                ) : (
+                  <RecentActivity transactions={transactions} />
+                )}
+              </Animated.View>
           )}
 
         </ScrollView>
@@ -187,7 +193,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   scrollView: {
     flex: 1,

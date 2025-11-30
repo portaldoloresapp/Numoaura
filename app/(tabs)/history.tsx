@@ -1,19 +1,36 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, RefreshControl, SafeAreaView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, RefreshControl, SafeAreaView, ScrollView } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from 'expo-router';
-import { ShoppingCart, Home, Car, Zap, Coffee, Gift, DollarSign, ArrowUpCircle, ArrowDownCircle, Calendar, Clock } from 'lucide-react-native';
+import { ShoppingCart, Home, Car, Zap, Coffee, Gift, DollarSign, Target } from 'lucide-react-native';
 import { Transaction } from '../../types';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
+import AnimatedTouchable from '../../components/AnimatedTouchable';
+import Skeleton from '../../components/Skeleton';
+
+const FILTER_CATEGORIES = [
+    { id: 'all', label: 'Todos' },
+    { id: 'mercado', label: 'Mercado' },
+    { id: 'casa', label: 'Casa' },
+    { id: 'transporte', label: 'Transporte' },
+    { id: 'contas', label: 'Contas' },
+    { id: 'lazer', label: 'Lazer' },
+    { id: 'presentes', label: 'Presentes' },
+    { id: 'investimento', label: 'Investimento' },
+    { id: 'outros', label: 'Outros' },
+];
 
 export default function HistoryScreen() {
   const { user } = useAuth();
+  const [rawTransactions, setRawTransactions] = useState<Transaction[]>([]);
   const [sections, setSections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   const fetchHistory = async () => {
     if (!user) return;
@@ -28,22 +45,7 @@ export default function HistoryScreen() {
       if (error) throw error;
 
       if (data) {
-        // Agrupar por data
-        const grouped = data.reduce((acc: any, transaction: Transaction) => {
-          const date = transaction.created_at.split('T')[0]; // YYYY-MM-DD
-          if (!acc[date]) {
-            acc[date] = [];
-          }
-          acc[date].push(transaction);
-          return acc;
-        }, {});
-
-        const sectionsData = Object.keys(grouped).map(date => ({
-          title: date,
-          data: grouped[date]
-        }));
-
-        setSections(sectionsData);
+        setRawTransactions(data);
       }
     } catch (error: any) {
       console.log('Error fetching history:', error.message);
@@ -51,6 +53,34 @@ export default function HistoryScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+      if (rawTransactions.length === 0) {
+          setSections([]);
+          return;
+      }
+
+      const filteredData = selectedCategory === 'all' 
+        ? rawTransactions 
+        : rawTransactions.filter(t => t.category === selectedCategory);
+
+      const grouped = filteredData.reduce((acc: any, transaction: Transaction) => {
+        const date = transaction.created_at.split('T')[0];
+        if (!acc[date]) {
+          acc[date] = [];
+        }
+        acc[date].push(transaction);
+        return acc;
+      }, {});
+
+      const sectionsData = Object.keys(grouped).map(date => ({
+        title: date,
+        data: grouped[date]
+      }));
+
+      setSections(sectionsData);
+
+  }, [rawTransactions, selectedCategory]);
 
   useFocusEffect(
     useCallback(() => {
@@ -72,6 +102,7 @@ export default function HistoryScreen() {
         case 'contas': return Zap;
         case 'lazer': return Coffee;
         case 'presentes': return Gift;
+        case 'investimento': return Target;
         default: return DollarSign;
     }
   };
@@ -84,34 +115,44 @@ export default function HistoryScreen() {
     if (isYesterday(date)) label = 'Ontem';
 
     return (
-      <View style={styles.sectionHeader}>
+      <Animated.View 
+        entering={FadeInDown.duration(400)}
+        style={styles.sectionHeader}
+      >
         <Text style={styles.sectionTitle}>{label}</Text>
-      </View>
+      </Animated.View>
     );
   };
 
-  const renderItem = ({ item }: { item: Transaction }) => {
+  const renderItem = ({ item, index }: { item: Transaction, index: number }) => {
     const Icon = getCategoryIcon(item.category);
     const isExpense = item.type === 'expense';
 
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.7}>
-        <View style={styles.left}>
-          <View style={[styles.iconBox, { backgroundColor: isExpense ? '#FFF0F0' : '#F0FFF4' }]}>
-            <Icon size={20} color={isExpense ? COLORS.danger : COLORS.success} />
-          </View>
-          <View>
-            <Text style={styles.description}>{item.description || item.category}</Text>
-            <Text style={styles.time}>
-              {format(parseISO(item.created_at), 'HH:mm')} • {item.category}
+      <Animated.View 
+        entering={FadeInRight.delay(index * 50).springify()} 
+        layout={Layout.springify()}
+      >
+          <AnimatedTouchable style={styles.card}>
+            <View style={styles.left}>
+              <View style={styles.iconBox}>
+                <Icon size={20} color={COLORS.white} />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
+                    {item.description || item.category}
+                </Text>
+                <Text style={styles.time}>
+                  {format(parseISO(item.created_at), 'HH:mm')} • {item.category}
+                </Text>
+              </View>
+            </View>
+            
+            <Text style={[styles.amount, { color: isExpense ? COLORS.text : COLORS.success }]}>
+              {isExpense ? '-' : '+'} {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </Text>
-          </View>
-        </View>
-        
-        <Text style={[styles.amount, { color: isExpense ? COLORS.text : COLORS.success }]}>
-          {isExpense ? '-' : '+'} {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-        </Text>
-      </TouchableOpacity>
+          </AnimatedTouchable>
+      </Animated.View>
     );
   };
 
@@ -119,14 +160,49 @@ export default function HistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Histórico</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-            <Clock size={20} color={COLORS.black} />
-        </TouchableOpacity>
+      </View>
+
+      {/* Filtros de Categoria */}
+      <View style={styles.filterContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.filterContent}
+          >
+              {FILTER_CATEGORIES.map((cat) => (
+                  <AnimatedTouchable 
+                    key={cat.id}
+                    style={[
+                        styles.filterChip,
+                        selectedCategory === cat.id && styles.activeFilterChip
+                    ]}
+                    onPress={() => setSelectedCategory(cat.id)}
+                  >
+                      <Text style={[
+                          styles.filterText,
+                          selectedCategory === cat.id && styles.activeFilterText
+                      ]}>
+                          {cat.label}
+                      </Text>
+                  </AnimatedTouchable>
+              ))}
+          </ScrollView>
       </View>
 
       {loading && !refreshing ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+        <View style={styles.loadingContainer}>
+            {[1,2,3,4,5].map(i => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 16 }}>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                        <Skeleton width={40} height={40} borderRadius={20} />
+                        <View style={{ gap: 4 }}>
+                            <Skeleton width={120} height={14} />
+                            <Skeleton width={80} height={12} />
+                        </View>
+                    </View>
+                    <Skeleton width={80} height={14} />
+                </View>
+            ))}
         </View>
       ) : (
         <SectionList
@@ -139,8 +215,11 @@ export default function HistoryScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Calendar size={48} color={COLORS.textLight} />
-              <Text style={styles.emptyText}>Nenhuma transação encontrada.</Text>
+              <Text style={styles.emptyText}>
+                  {selectedCategory === 'all' 
+                    ? 'Nenhuma transação encontrada.' 
+                    : `Nenhuma transação de ${FILTER_CATEGORIES.find(c => c.id === selectedCategory)?.label}.`}
+              </Text>
             </View>
           }
         />
@@ -160,23 +239,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.m,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray,
+    paddingBottom: SPACING.s,
   },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter_700Bold',
     color: COLORS.text,
   },
-  refreshBtn: {
-      padding: 8,
+  filterContainer: {
+      paddingBottom: SPACING.m,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
+  },
+  filterContent: {
+      paddingHorizontal: SPACING.l,
+      gap: 8
+  },
+  filterChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
       backgroundColor: COLORS.gray,
-      borderRadius: 20
+      borderWidth: 1,
+      borderColor: 'transparent'
+  },
+  activeFilterChip: {
+      backgroundColor: COLORS.black,
+      borderColor: COLORS.black
+  },
+  filterText: {
+      fontSize: 12,
+      fontFamily: 'Inter_600SemiBold',
+      color: COLORS.textSecondary
+  },
+  activeFilterText: {
+      color: COLORS.white
   },
   listContent: {
     paddingHorizontal: SPACING.l,
-    paddingBottom: 100,
+    paddingBottom: 150, 
   },
   sectionHeader: {
     backgroundColor: COLORS.white,
@@ -196,21 +297,29 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
+    width: '100%',
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    marginRight: 8,
   },
   iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.dark,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
+  },
+  textContainer: {
+    flex: 1,
   },
   description: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: COLORS.text,
     textTransform: 'capitalize',
@@ -223,13 +332,14 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   amount: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter_700Bold',
+    flexShrink: 0,
+    textAlign: 'right',
   },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  loadingContainer: {
+    paddingHorizontal: SPACING.l,
+    marginTop: 20
   },
   emptyContainer: {
     alignItems: 'center',
@@ -241,5 +351,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
     color: COLORS.textSecondary,
+    textAlign: 'center'
   },
 });

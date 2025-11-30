@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { uploadImageToSupabase } from '../../lib/storage'; // Importando o novo serviço
-import { Mail, Lock, User, ArrowLeft, Building2, Camera, Briefcase, Command } from 'lucide-react-native';
+import { Mail, Lock, User, ArrowLeft, Building2, Briefcase, Command, Link as LinkIcon, Check, X, Image as ImageIcon } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
-import * as ImagePicker from 'expo-image-picker';
 
 type AccountType = 'personal' | 'business';
 
@@ -16,31 +14,44 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [logoUri, setLogoUri] = useState<string | null>(null);
+  
+  // Estados para o Logo/Avatar via Link
+  const [logoUrl, setLogoUrl] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [tempUrl, setTempUrl] = useState('');
+  const [imageError, setImageError] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permissão negada', 'Precisamos de acesso à sua galeria para escolher o logotipo.');
+  const handleApplyUrl = () => {
+    const trimmedUrl = tempUrl.trim();
+    
+    // Fecha o teclado para melhor UX
+    Keyboard.dismiss();
+
+    if (!trimmedUrl) {
+        setShowUrlInput(false);
         return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setLogoUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Falha ao abrir a galeria.');
     }
+
+    // Validação simples de URL
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+        Alert.alert('URL Inválida', 'O link da imagem deve começar com http:// ou https://');
+        return;
+    }
+
+    setLogoUrl(trimmedUrl);
+    setImageError(false);
+    setShowUrlInput(false);
+    setTempUrl('');
+  };
+
+  const handleToggleUrlInput = () => {
+      if (!showUrlInput) {
+          // Se estiver abrindo, limpa o tempUrl ou poderia preencher com o atual
+          setTempUrl('');
+      }
+      setShowUrlInput(!showUrlInput);
   };
 
   const handleSignUp = async () => {
@@ -52,10 +63,15 @@ export default function SignUpScreen() {
     setLoading(true);
     
     try {
-      const initialMetadata = {
+      const initialMetadata: any = {
         full_name: name,
         account_type: accountType,
       };
+
+      // Se for conta empresarial e tiver URL de logo, adiciona aos metadados
+      if (accountType === 'business' && logoUrl.trim()) {
+        initialMetadata.avatar_url = logoUrl.trim();
+      }
 
       // 1. Criar Usuário
       const { data, error } = await supabase.auth.signUp({
@@ -67,22 +83,6 @@ export default function SignUpScreen() {
       });
 
       if (error) throw error;
-
-      // 2. Upload da Imagem (Se houver e for conta Business)
-      if (data.user && logoUri && accountType === 'business') {
-        if (data.session) {
-            // Uso do serviço robusto de storage
-            const publicUrl = await uploadImageToSupabase(data.user.id, logoUri);
-
-            if (publicUrl) {
-                await supabase.auth.updateUser({
-                    data: { avatar_url: publicUrl }
-                });
-            }
-            // Se publicUrl for null, o erro já foi tratado e alertado pelo serviço,
-            // o fluxo segue sem quebrar o cadastro.
-        }
-      }
 
       setLoading(false);
 
@@ -144,27 +144,69 @@ export default function SignUpScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Seção de Logo para Empresa */}
+          {accountType === 'business' && (
+            <View style={styles.avatarSection}>
+                <View style={styles.avatarContainer}>
+                    {logoUrl && !imageError ? (
+                        <Image 
+                            source={{ uri: logoUrl }} 
+                            style={styles.avatarImage}
+                            onError={() => setImageError(true)}
+                        />
+                    ) : (
+                        <View style={styles.defaultAvatar}>
+                            <Command size={40} color={COLORS.black} />
+                        </View>
+                    )}
+                    
+                    {/* Botão de Link */}
+                    <View style={styles.imageActions}>
+                        <TouchableOpacity 
+                            style={styles.actionBtnCircle} 
+                            onPress={handleToggleUrlInput}
+                        >
+                            <LinkIcon size={18} color={COLORS.white} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Input de URL Condicional */}
+                {showUrlInput && (
+                    <View style={styles.urlInputContainer}>
+                        <View style={styles.urlInputWrapper}>
+                            <ImageIcon size={16} color={COLORS.textSecondary} style={{ marginLeft: 8 }} />
+                            <TextInput 
+                                style={styles.urlInput}
+                                placeholder="Cole o link da imagem (https://...)"
+                                placeholderTextColor={COLORS.textSecondary}
+                                value={tempUrl}
+                                onChangeText={setTempUrl}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                keyboardType="url"
+                                autoFocus
+                            />
+                        </View>
+                        <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
+                            <Check size={18} color={COLORS.white} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.cancelUrlBtn} onPress={() => setShowUrlInput(false)}>
+                            <X size={18} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+                
+                {!showUrlInput && (
+                    <Text style={styles.avatarHint}>
+                        {logoUrl ? 'Logo definido via link' : 'Defina o logo da sua empresa (Opcional)'}
+                    </Text>
+                )}
+            </View>
+          )}
+
           <View style={styles.form}>
             
-            {accountType === 'business' && (
-                <View style={styles.logoUploadContainer}>
-                    <TouchableOpacity style={styles.logoButton} onPress={pickImage}>
-                        {logoUri ? (
-                            <Image source={{ uri: logoUri }} style={styles.logoImage} />
-                        ) : (
-                            <View style={styles.logoPlaceholder}>
-                                <Camera size={24} color={COLORS.textSecondary} />
-                                <Text style={styles.logoText}>Logo</Text>
-                            </View>
-                        )}
-                        <View style={styles.editIconBadge}>
-                            <Camera size={12} color={COLORS.black} />
-                        </View>
-                    </TouchableOpacity>
-                    <Text style={styles.uploadHint}>Toque para adicionar o logo da empresa</Text>
-                </View>
-            )}
-
             <View style={styles.inputContainer}>
               {accountType === 'personal' ? (
                   <User size={20} color={COLORS.textSecondary} />
@@ -296,54 +338,90 @@ const styles = StyleSheet.create({
   activeTypeText: {
       color: COLORS.black
   },
-  logoUploadContainer: {
+  // Avatar Styles
+  avatarSection: {
       alignItems: 'center',
       marginBottom: SPACING.l
   },
-  logoButton: {
+  avatarContainer: {
+      position: 'relative',
+      marginBottom: SPACING.s
+  },
+  defaultAvatar: {
       width: 100,
       height: 100,
       borderRadius: 50,
-      backgroundColor: '#1E1E1E',
-      borderWidth: 1,
-      borderColor: '#333',
-      borderStyle: 'dashed',
+      backgroundColor: COLORS.primary, // Fundo verde limão (Logo Numoaura)
       justifyContent: 'center',
       alignItems: 'center',
-      position: 'relative',
-      overflow: 'hidden'
   },
-  logoImage: {
-      width: '100%',
-      height: '100%'
+  avatarImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      borderWidth: 2,
+      borderColor: COLORS.primary
   },
-  logoPlaceholder: {
-      alignItems: 'center',
-      gap: 4
-  },
-  logoText: {
-      fontSize: 12,
-      color: COLORS.textSecondary,
-      fontFamily: 'Inter_600SemiBold'
-  },
-  editIconBadge: {
+  imageActions: {
       position: 'absolute',
       bottom: 0,
       right: 0,
-      backgroundColor: COLORS.primary,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+  },
+  actionBtnCircle: {
+      backgroundColor: COLORS.black, // Botão preto para contraste
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
-      borderColor: COLORS.dark
+      borderColor: COLORS.dark,
   },
-  uploadHint: {
+  avatarHint: {
       color: COLORS.textSecondary,
       fontSize: 12,
-      marginTop: 8,
       fontFamily: 'Inter_400Regular'
+  },
+  urlInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+      gap: 8,
+      marginBottom: SPACING.s
+  },
+  urlInputWrapper: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#1E1E1E',
+      borderRadius: BORDER_RADIUS.m,
+      height: 44,
+      borderWidth: 1,
+      borderColor: '#333'
+  },
+  urlInput: {
+      flex: 1,
+      paddingHorizontal: SPACING.s,
+      height: '100%',
+      fontSize: 12,
+      fontFamily: 'Inter_400Regular',
+      color: COLORS.white
+  },
+  applyUrlBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: COLORS.primary,
+      justifyContent: 'center',
+      alignItems: 'center'
+  },
+  cancelUrlBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#333',
+      justifyContent: 'center',
+      alignItems: 'center'
   },
   form: {
     gap: SPACING.l,
