@@ -1,14 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Alert, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { Box, Plus, Umbrella, Plane, Car, Smartphone, Target } from 'lucide-react-native';
+import { Box, Plus, Target } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Goal } from '../../types';
 
 export default function WalletScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -18,7 +19,8 @@ export default function WalletScreen() {
           const { data, error } = await supabase
             .from('goals')
             .select('*')
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
             
           if (error) throw error;
           if (data) setGoals(data);
@@ -40,21 +42,27 @@ export default function WalletScreen() {
   };
 
   const handleAddGoal = async () => {
-      // Simulação rápida de criação para teste
       if (!user) return;
+      
+      // Criando uma meta padrão para o usuário editar depois
       const newGoal = {
           user_id: user.id,
           title: 'Nova Meta',
-          target_amount: 5000,
+          target_amount: 1000,
           current_amount: 0,
           icon: 'target',
           color: '#E0F7FA'
       };
 
-      const { error } = await supabase.from('goals').insert(newGoal);
-      if (!error) {
-          fetchGoals();
-          Alert.alert('Sucesso', 'Nova caixinha criada!');
+      const { data, error } = await supabase
+        .from('goals')
+        .insert(newGoal)
+        .select()
+        .single();
+
+      if (!error && data) {
+          // Redireciona direto para a edição da nova meta
+          router.push(`/goal/${data.id}`);
       } else {
           Alert.alert('Erro', 'Não foi possível criar a caixinha.');
       }
@@ -95,7 +103,11 @@ export default function WalletScreen() {
         renderItem={({ item }) => {
             const progress = item.target_amount > 0 ? item.current_amount / item.target_amount : 0;
             return (
-                <TouchableOpacity style={styles.card} activeOpacity={0.9}>
+                <TouchableOpacity 
+                    style={styles.card} 
+                    activeOpacity={0.7}
+                    onPress={() => router.push(`/goal/${item.id}`)}
+                >
                     <View style={[styles.iconBox, { backgroundColor: item.color || '#EEE' }]}>
                         <Target size={24} color={COLORS.black} />
                     </View>

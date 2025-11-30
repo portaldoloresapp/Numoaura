@@ -4,6 +4,7 @@ import { useFonts, Inter_400Regular, Inter_600SemiBold, Inter_700Bold } from '@e
 import { View, ActivityIndicator } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { PreferencesProvider } from '../context/PreferencesContext';
 import { useEffect } from 'react';
 
 // Componente separado para lidar com a proteção de rotas
@@ -24,10 +25,8 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === 'auth';
 
     if (!session && !inAuthGroup) {
-      // Se não estiver logado e não estiver na tela de auth, manda pro login
       router.replace('/auth/login');
     } else if (session && inAuthGroup) {
-      // Se já estiver logado e tentar acessar auth, manda pra home
       router.replace('/(tabs)');
     }
   }, [session, segments, isLoading, fontsLoaded]);
@@ -48,6 +47,17 @@ function RootLayoutNav() {
         <Stack.Screen name="auth/signup" />
         <Stack.Screen name="budget-modal" options={{ presentation: 'modal' }} />
         <Stack.Screen name="add-transaction" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="goal/[id]" options={{ presentation: 'card', title: 'Detalhes' }} />
+        
+        {/* Nova rota de configurações */}
+        <Stack.Screen 
+            name="settings/home-config" 
+            options={{ 
+                presentation: 'card', 
+                headerShown: false,
+                animation: 'slide_from_right'
+            }} 
+        />
       </Stack>
       <StatusBar style="light" />
     </>
@@ -57,7 +67,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <PreferencesProvider>
+        <RootLayoutNav />
+      </PreferencesProvider>
     </AuthProvider>
   );
 }

@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
-import { Settings, LogOut, ChevronRight, User } from 'lucide-react-native';
+import { Settings, LogOut, ChevronRight, User, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert(
@@ -25,6 +27,15 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+        {/* Barra Superior com Botão Voltar */}
+        <View style={styles.topBar}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <ArrowLeft size={24} color={COLORS.black} />
+            </TouchableOpacity>
+            <Text style={styles.screenTitle}>Meu Perfil</Text>
+            <View style={{ width: 40 }} /> 
+        </View>
+
         <View style={styles.header}>
             <Image 
                 source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
@@ -60,6 +71,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
     paddingTop: 40
+  },
+  topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.l,
+      marginBottom: SPACING.m
+  },
+  backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: COLORS.gray,
+      justifyContent: 'center',
+      alignItems: 'center'
+  },
+  screenTitle: {
+      fontSize: 18,
+      fontFamily: 'Inter_700Bold',
+      color: COLORS.text
   },
   header: {
       alignItems: 'center',

@@ -4,15 +4,19 @@ import { COLORS, SPACING } from '../../constants/theme';
 import { LayoutGrid, SlidersHorizontal, Plus, ChevronDown } from 'lucide-react-native';
 import SummaryCard from '../../components/SummaryCard';
 import RecentActivity from '../../components/RecentActivity';
+import ActionGrid from '../../components/ActionGrid';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { usePreferences } from '../../context/PreferencesContext';
 import { Transaction } from '../../types';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { visibleWidgets } = usePreferences();
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState(0);
   const [income, setIncome] = useState(0);
@@ -23,7 +27,6 @@ export default function HomeScreen() {
     if (!user) return;
     
     try {
-        // Fetch transactions
         const { data, error } = await supabase
             .from('transactions')
             .select('*')
@@ -35,7 +38,6 @@ export default function HomeScreen() {
         if (data) {
             setTransactions(data);
 
-            // Calculate totals
             let totalIncome = 0;
             let totalExpense = 0;
 
@@ -66,18 +68,22 @@ export default function HomeScreen() {
       setRefreshing(false);
   };
 
-  const handleFeatureNotImplemented = (feature: string) => {
-    Alert.alert('Em Breve', `A funcionalidade ${feature} estará disponível na próxima atualização.`);
+  const handleAccountSelect = () => {
+    Alert.alert(
+      "Selecionar Conta",
+      "Escolha qual conta deseja visualizar",
+      [
+        { text: "Conta Principal", onPress: () => console.log("Já na conta principal") },
+        { text: "Ver Caixinhas", onPress: () => router.push('/(tabs)/wallet') },
+        { text: "Cancelar", style: "cancel" }
+      ]
+    );
   };
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar style="dark" />
       
-      {/* Background Split */}
-      <View style={styles.greenBackground} />
-      <View style={styles.whiteBackground} />
-
       <SafeAreaView style={styles.safeArea}>
         <ScrollView 
           style={styles.scrollView} 
@@ -94,16 +100,13 @@ export default function HomeScreen() {
               <View style={styles.leftHeader}>
                 <TouchableOpacity 
                   style={styles.iconBtn} 
-                  onPress={() => handleFeatureNotImplemented('Menu')}
+                  onPress={() => router.push('/(tabs)/menu')}
                 >
                   <LayoutGrid size={24} color={COLORS.black} />
-                  <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>New</Text>
-                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.iconBtn}
-                  onPress={() => handleFeatureNotImplemented('Configurações')}
+                  onPress={() => router.push('/settings/home-config')}
                 >
                   <SlidersHorizontal size={24} color={COLORS.black} />
                 </TouchableOpacity>
@@ -132,7 +135,7 @@ export default function HomeScreen() {
             <View style={styles.subHeader}>
                 <TouchableOpacity 
                   style={styles.walletSelector}
-                  onPress={() => handleFeatureNotImplemented('Trocar Conta')}
+                  onPress={handleAccountSelect}
                 >
                     <Text style={styles.walletText}>Conta Principal</Text>
                     <ChevronDown size={16} color={COLORS.black} />
@@ -141,14 +144,35 @@ export default function HomeScreen() {
             </View>
 
             {/* Main Summary Card */}
-            <SummaryCard balance={balance} income={income} expense={expense} />
+            {visibleWidgets.summary && (
+                <SummaryCard balance={balance} income={income} expense={expense} />
+            )}
+            
+            {/* Action Grid */}
+            {visibleWidgets.actions && (
+                <View style={{ marginTop: SPACING.l }}>
+                    <ActionGrid />
+                </View>
+            )}
 
           </View>
 
           {/* Recent Activity Section */}
-          <View style={{ paddingHorizontal: SPACING.l }}>
-            <RecentActivity transactions={transactions} />
-          </View>
+          {visibleWidgets.recent_activity && (
+              <View style={{ paddingHorizontal: SPACING.l }}>
+                <RecentActivity transactions={transactions} />
+              </View>
+          )}
+
+          {/* Empty State */}
+          {!visibleWidgets.summary && !visibleWidgets.actions && !visibleWidgets.recent_activity && (
+              <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>Sua tela inicial está limpa.</Text>
+                  <TouchableOpacity onPress={() => router.push('/settings/home-config')}>
+                      <Text style={styles.emptyStateLink}>Configurar visualização</Text>
+                  </TouchableOpacity>
+              </View>
+          )}
 
         </ScrollView>
       </SafeAreaView>
@@ -159,25 +183,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: COLORS.white,
-  },
-  greenBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '45%', 
-    backgroundColor: COLORS.primary,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-  },
-  whiteBackground: {
-    position: 'absolute',
-    top: '45%',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.white, // Fundo branco
   },
   safeArea: {
     flex: 1,
@@ -215,20 +221,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-  },
-  newBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    backgroundColor: '#6C5CE7', 
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  newBadgeText: {
-    color: COLORS.white,
-    fontSize: 8,
-    fontFamily: 'Inter_700Bold',
+    backgroundColor: COLORS.gray, // Cinza claro para contrastar com o fundo branco
+    borderRadius: 20,
   },
   profileContainer: {
       position: 'relative'
@@ -258,17 +252,33 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      padding: 4
+      padding: 4,
+      backgroundColor: COLORS.gray, // Cinza claro para visibilidade
+      borderRadius: 12,
+      paddingHorizontal: 8
   },
   walletText: {
-      fontFamily: 'Inter_400Regular',
+      fontFamily: 'Inter_600SemiBold',
       fontSize: 14,
-      color: '#333'
+      color: COLORS.black
   },
   welcomeText: {
       fontFamily: 'Inter_400Regular',
       fontSize: 14,
-      color: '#333',
-      fontStyle: 'italic'
+      color: COLORS.black,
+  },
+  emptyState: {
+      alignItems: 'center',
+      marginTop: 50,
+      gap: 8
+  },
+  emptyStateText: {
+      fontFamily: 'Inter_600SemiBold',
+      color: COLORS.black
+  },
+  emptyStateLink: {
+      fontFamily: 'Inter_700Bold',
+      color: COLORS.black,
+      textDecorationLine: 'underline'
   }
 });

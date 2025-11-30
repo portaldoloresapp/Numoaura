@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING } from '../../constants/theme';
-import { User, TrendingUp, Settings, LogOut, ChevronRight, CreditCard, HelpCircle, Shield } from 'lucide-react-native';
+import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, HelpCircle, Shield } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 
 export default function MenuScreen() {
@@ -25,15 +25,19 @@ export default function MenuScreen() {
       section: 'Geral',
       items: [
         { id: 'profile', label: 'Perfil', icon: User, route: '/(tabs)/profile' },
-        // Histórico removido daqui pois já está na barra principal
-        { id: 'stats', label: 'Estatísticas', icon: TrendingUp, route: '/(tabs)/statistics' },
+        { id: 'stats', label: 'Modo Avançado', icon: TrendingUp, route: '/(tabs)/statistics' },
       ]
     },
     {
       section: 'Configurações',
       items: [
+        { 
+            id: 'home-config', 
+            label: 'Configurar Início', 
+            icon: SlidersHorizontal,
+            route: '/settings/home-config' 
+        },
         { id: 'cards', label: 'Meus Cartões', icon: CreditCard, action: () => Alert.alert('Em breve', 'Gerenciamento de cartões') },
-        { id: 'settings', label: 'Configurações do App', icon: Settings, action: () => Alert.alert('Em breve', 'Configurações') },
         { id: 'security', label: 'Segurança', icon: Shield, action: () => Alert.alert('Em breve', 'Configurações de segurança') },
         { id: 'help', label: 'Ajuda e Suporte', icon: HelpCircle, action: () => Alert.alert('Em breve', 'Central de ajuda') },
       ]
@@ -61,7 +65,7 @@ export default function MenuScreen() {
           <View key={index} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.section}</Text>
             <View style={styles.sectionContent}>
-              {section.items.map((item, idx) => (
+              {section.items.map((item: any, idx) => (
                 <TouchableOpacity 
                   key={item.id} 
                   style={[
@@ -70,7 +74,7 @@ export default function MenuScreen() {
                   ]}
                   onPress={() => {
                     if (item.route) {
-                      router.push(item.route as any);
+                      router.push(item.route);
                     } else if (item.action) {
                       item.action();
                     }
@@ -95,7 +99,7 @@ export default function MenuScreen() {
             <Text style={styles.logoutText}>Sair da Conta</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Versão 1.0.0</Text>
+        <Text style={styles.version}>Versão 1.2.0</Text>
 
       </ScrollView>
     </SafeAreaView>
@@ -105,7 +109,7 @@ export default function MenuScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA', // Fundo levemente cinza para destacar os grupos
+    backgroundColor: '#F8F9FA',
     paddingTop: 40
   },
   scrollContent: {
