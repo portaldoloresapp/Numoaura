@@ -1,23 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING } from '../../constants/theme';
-import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, HelpCircle, Shield } from 'lucide-react-native';
+import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, Shield, HelpCircle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import LogoutModal from '../../components/LogoutModal';
 
 export default function MenuScreen() {
   const router = useRouter();
   const { signOut, user } = useAuth();
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [loadingLogout, setLoadingLogout] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Sair",
-      "Tem certeza que deseja sair?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Sair", style: "destructive", onPress: signOut }
-      ]
-    );
+  const handleLogoutPress = () => {
+    setLogoutVisible(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoadingLogout(true);
+    await signOut();
+    setLoadingLogout(false);
+    setLogoutVisible(false);
   };
 
   const menuItems = [
@@ -79,6 +82,7 @@ export default function MenuScreen() {
                       item.action();
                     }
                   }}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.menuLeft}>
                     <View style={styles.iconBox}>
@@ -94,14 +98,26 @@ export default function MenuScreen() {
         ))}
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity 
+            style={styles.logoutBtn} 
+            onPress={handleLogoutPress}
+            activeOpacity={0.8}
+        >
             <LogOut size={20} color={COLORS.danger} />
             <Text style={styles.logoutText}>Sair da Conta</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>Versão 1.2.0</Text>
+        <Text style={styles.version}>Versão 1.2.1</Text>
 
       </ScrollView>
+
+      {/* Modal de Logout */}
+      <LogoutModal 
+        visible={logoutVisible}
+        onClose={() => setLogoutVisible(false)}
+        onConfirm={confirmLogout}
+        loading={loadingLogout}
+      />
     </SafeAreaView>
   );
 }
@@ -204,7 +220,9 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
     borderRadius: 20,
     gap: 8,
-    marginTop: SPACING.s
+    marginTop: SPACING.s,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 77, 77, 0.1)'
   },
   logoutText: {
     color: COLORS.danger,

@@ -1,28 +1,32 @@
-import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Image, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Settings, LogOut, ChevronRight, User, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
+import LogoutModal from '../../components/LogoutModal';
 
 export default function ProfileScreen() {
   const { signOut, user } = useAuth();
   const router = useRouter();
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [loadingLogout, setLoadingLogout] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      "Sair",
-      "Tem certeza que deseja sair?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Sair", style: "destructive", onPress: signOut }
-      ]
-    );
+  const handleLogoutPress = () => {
+    setLogoutVisible(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoadingLogout(true);
+    await signOut();
+    setLoadingLogout(false);
+    setLogoutVisible(false);
   };
 
   const menuItems = [
       { id: 1, label: 'Dados Pessoais', icon: User, action: () => {} },
       { id: 2, label: 'Configurações', icon: Settings, action: () => {} },
-      { id: 3, label: 'Sair', icon: LogOut, color: COLORS.danger, action: handleLogout },
+      { id: 3, label: 'Sair', icon: LogOut, color: COLORS.danger, action: handleLogoutPress },
   ];
 
   return (
@@ -51,9 +55,10 @@ export default function ProfileScreen() {
                     key={item.id} 
                     style={styles.menuItem}
                     onPress={item.action}
+                    activeOpacity={0.7}
                 >
                     <View style={styles.menuLeft}>
-                        <View style={styles.iconBox}>
+                        <View style={[styles.iconBox, item.color ? { backgroundColor: '#FFF0F0' } : {}]}>
                             <item.icon size={20} color={item.color || COLORS.black} />
                         </View>
                         <Text style={[styles.menuText, item.color && { color: item.color }]}>{item.label}</Text>
@@ -62,6 +67,14 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
             ))}
         </View>
+
+        {/* Modal de Logout */}
+        <LogoutModal 
+            visible={logoutVisible}
+            onClose={() => setLogoutVisible(false)}
+            onConfirm={confirmLogout}
+            loading={loadingLogout}
+        />
     </SafeAreaView>
   );
 }

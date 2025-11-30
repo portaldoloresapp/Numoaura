@@ -1,8 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { ActivityIndicator, View } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { Alert } from 'react-native';
 
 type AuthContextType = {
   session: Session | null;
@@ -25,13 +24,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch initial session
+    // Busca sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsLoading(false);
     });
 
-    // Listen for auth changes
+    // Escuta mudanças na autenticação (Login, Logout, Token Refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setIsLoading(false);
@@ -41,7 +40,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+        // Tenta fazer o logout no Supabase
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
+            console.error("Erro ao fazer logout:", error.message);
+            // Mesmo com erro, vamos forçar a limpeza local para não prender o usuário
+        }
+        
+        // Força a limpeza do estado local imediatamente para garantir o redirecionamento
+        setSession(null);
+        
+    } catch (e) {
+        console.error("Erro inesperado no logout:", e);
+        // Força a limpeza mesmo em caso de exceção
+        setSession(null);
+    }
   };
 
   return (
