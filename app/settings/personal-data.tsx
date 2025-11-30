@@ -14,11 +14,9 @@ import {
   Platform 
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
-import { ArrowLeft, Camera, User, Lock, Save, Mail, Link as LinkIcon, Check, X } from 'lucide-react-native';
+import { ArrowLeft, User, Lock, Save, Mail, Link as LinkIcon, Check, X, Image as ImageIcon } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { uploadImageToSupabase } from '../../lib/storage';
 import { useAuth } from '../../context/AuthContext';
 
 export default function PersonalDataScreen() {
@@ -28,7 +26,9 @@ export default function PersonalDataScreen() {
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Estado para controle de erro de carregamento da imagem
+  const [imageError, setImageError] = useState(false);
 
   // Estados para Link de Imagem
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -38,6 +38,8 @@ export default function PersonalDataScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loadingPassword, setLoadingPassword] = useState(false);
 
+  const defaultAvatar = 'https://i.pravatar.cc/150?u=default';
+
   useEffect(() => {
     if (user) {
       setName(user.user_metadata?.full_name || '');
@@ -45,68 +47,26 @@ export default function PersonalDataScreen() {
     }
   }, [user]);
 
-  // --- Lógica de Upload (Galeria) ---
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permissão necessária', 'Precisamos de acesso à galeria para alterar sua foto.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        handleImageUpload(result.assets[0]);
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
-    }
-  };
-
-  const handleImageUpload = async (imageAsset: ImagePicker.ImagePickerAsset) => {
-    if (!user) return;
-    setUploadingImage(true);
-    setShowUrlInput(false); // Esconde o input de link se estiver aberto
-
-    try {
-      const publicUrl = await uploadImageToSupabase(user.id, imageAsset.uri);
-      
-      if (publicUrl) {
-        setAvatarUrl(publicUrl);
-        // Atualiza imediatamente no Supabase para uploads
-        const { error } = await supabase.auth.updateUser({
-            data: { avatar_url: publicUrl }
-        });
-        
-        if (error) throw error;
-        Alert.alert('Sucesso', 'Foto de perfil atualizada!');
-      }
-    } catch (error: any) {
-      console.log('Erro ao salvar metadados:', error);
-      Alert.alert('Erro', 'A imagem foi enviada, mas falhou ao atualizar seu perfil.');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  // --- Lógica de Link Direto ---
+  // --- Validação e Aplicação de URL ---
   const handleApplyUrl = () => {
-    if (!tempUrl.trim()) {
+    const trimmedUrl = tempUrl.trim();
+
+    if (!trimmedUrl) {
         setShowUrlInput(false);
         return;
     }
-    // Atualiza o preview visualmente
-    setAvatarUrl(tempUrl);
+
+    // Validação simples de URL
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+        Alert.alert('URL Inválida', 'O link da imagem deve começar com http:// ou https://');
+        return;
+    }
+
+    // Atualiza o preview visualmente e reseta o erro
+    setAvatarUrl(trimmedUrl);
+    setImageError(false); 
     setShowUrlInput(false);
     setTempUrl('');
-    Alert.alert('Preview Atualizado', 'A imagem foi carregada. Clique em "Salvar Alterações" para confirmar.');
   };
 
   // --- Salvar Geral (Nome + Avatar Link) ---
@@ -118,7 +78,7 @@ export default function PersonalDataScreen() {
 
     setLoadingProfile(true);
     try {
-      // Atualiza tanto o nome quanto a URL (caso tenha sido alterada via Link)
+      // Atualiza o perfil no Supabase com a nova URL (string)
       const { error } = await supabase.auth.updateUser({
         data: { 
             full_name: name,
@@ -128,6 +88,7 @@ export default function PersonalDataScreen() {
       
       if (error) throw error;
       Alert.alert('Sucesso', 'Perfil atualizado com sucesso!');
+      router.back();
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     } finally {
@@ -209,32 +170,18 @@ export default function PersonalDataScreen() {
             <View style={styles.avatarContainer}>
               <Image 
                 key={avatarUrl} // Força re-render se URL mudar
-                source={{ uri: avatarUrl || 'https://i.pravatar.cc/150?u=default' }} 
-                style={styles.avatar} 
+                source={{ uri: (avatarUrl && !imageError) ? avatarUrl : defaultAvatar }} 
+                style={styles.avatar}
+                onError={() => setImageError(true)} // Fallback se a imagem quebrar
               />
               
-              {/* Botões de Ação da Imagem */}
+              {/* Botão de Edição (Link) */}
               <View style={styles.imageActions}>
-                  {/* Botão Galeria */}
-                  <TouchableOpacity 
-                    style={styles.actionBtnCircle} 
-                    onPress={pickImage}
-                    disabled={uploadingImage}
-                  >
-                    {uploadingImage ? (
-                      <ActivityIndicator size="small" color={COLORS.white} />
-                    ) : (
-                      <Camera size={18} color={COLORS.white} />
-                    )}
-                  </TouchableOpacity>
-
-                  {/* Botão Link */}
                   <TouchableOpacity 
                     style={[styles.actionBtnCircle, { backgroundColor: COLORS.primary }]} 
                     onPress={() => setShowUrlInput(!showUrlInput)}
-                    disabled={uploadingImage}
                   >
-                    <LinkIcon size={18} color={COLORS.black} />
+                    <LinkIcon size={20} color={COLORS.black} />
                   </TouchableOpacity>
               </View>
             </View>
@@ -242,15 +189,19 @@ export default function PersonalDataScreen() {
             {/* Input de URL Condicional */}
             {showUrlInput && (
                 <View style={styles.urlInputContainer}>
-                    <TextInput 
-                        style={styles.urlInput}
-                        placeholder="Cole o link da imagem aqui..."
-                        placeholderTextColor={COLORS.textSecondary}
-                        value={tempUrl}
-                        onChangeText={setTempUrl}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
+                    <View style={styles.inputWrapper}>
+                        <ImageIcon size={16} color={COLORS.textSecondary} style={{ marginLeft: 8 }} />
+                        <TextInput 
+                            style={styles.urlInput}
+                            placeholder="Cole o link da imagem (https://...)"
+                            placeholderTextColor={COLORS.textSecondary}
+                            value={tempUrl}
+                            onChangeText={setTempUrl}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                        />
+                    </View>
                     <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
                         <Check size={18} color={COLORS.white} />
                     </TouchableOpacity>
@@ -397,17 +348,16 @@ const styles = StyleSheet.create({
   imageActions: {
       position: 'absolute',
       bottom: 0,
-      flexDirection: 'row',
-      gap: 8
+      right: 0, // Centralizado à direita inferior
   },
   actionBtnCircle: {
     backgroundColor: COLORS.black,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: COLORS.white,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -423,28 +373,34 @@ const styles = StyleSheet.create({
       marginBottom: SPACING.s,
       gap: 8
   },
-  urlInput: {
+  inputWrapper: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: COLORS.gray,
       borderRadius: BORDER_RADIUS.m,
-      paddingHorizontal: SPACING.m,
-      height: 40,
+      height: 44,
+  },
+  urlInput: {
+      flex: 1,
+      paddingHorizontal: SPACING.s,
+      height: '100%',
       fontSize: 12,
       fontFamily: 'Inter_400Regular',
       color: COLORS.text
   },
   applyUrlBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: COLORS.success,
       justifyContent: 'center',
       alignItems: 'center'
   },
   cancelUrlBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: COLORS.gray,
       justifyContent: 'center',
       alignItems: 'center'

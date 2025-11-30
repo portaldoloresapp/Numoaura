@@ -15,12 +15,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: COLORS.white,
         tabBarInactiveTintColor: '#666',
         tabBarHideOnKeyboard: true,
-        tabBarItemStyle: {
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingVertical: 0, 
-          margin: 0,
-        },
+        tabBarItemStyle: styles.tabBarItem,
       }}
     >
       {/* 1. Home (Início) */}
@@ -31,7 +26,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <House 
-                size={28} 
+                size={26} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -48,7 +43,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <Box 
-                size={28} 
+                size={26} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -63,7 +58,7 @@ export default function TabLayout() {
         options={{
           title: 'Adicionar',
           tabBarButton: (props) => (
-            <View style={styles.centerButtonWrapper}>
+            <View style={styles.centerButtonContainer} pointerEvents="box-none">
                 <TouchableOpacity
                   style={styles.centerButton}
                   onPress={(e) => {
@@ -72,14 +67,14 @@ export default function TabLayout() {
                   }}
                   activeOpacity={0.9}
                 >
-                  <Plus size={32} color={COLORS.black} strokeWidth={2.5} />
+                  <Plus size={32} color={COLORS.black} strokeWidth={3} />
                 </TouchableOpacity>
             </View>
           ),
         }}
       />
 
-      {/* 4. Histórico (Restaurado) */}
+      {/* 4. Histórico */}
       <Tabs.Screen
         name="history"
         options={{
@@ -87,7 +82,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <History 
-                size={28} 
+                size={26} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -104,7 +99,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <MoreHorizontal 
-                size={28} 
+                size={26} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -114,22 +109,8 @@ export default function TabLayout() {
       />
 
       {/* -- ROTAS OCULTAS DA BARRA -- */}
-      
-      {/* Perfil */}
-      <Tabs.Screen
-        name="profile"
-        options={{
-          href: null, // Oculta da barra
-        }}
-      />
-
-      {/* Estatísticas */}
-      <Tabs.Screen
-        name="statistics"
-        options={{
-          href: null, // Oculta da barra
-        }}
-      />
+      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="statistics" options={{ href: null }} />
 
     </Tabs>
   );
@@ -143,31 +124,37 @@ const styles = StyleSheet.create({
     right: 20,
     backgroundColor: '#121212', // Preto profundo
     borderRadius: 40, // Pílula
-    height: 70, // Altura ajustada
+    height: 70,
     borderTopWidth: 0,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingBottom: 0, // Remove padding extra do iOS
+    paddingHorizontal: 10, // Espaçamento lateral interno para afastar ícones das bordas
     alignItems: 'center',
-    justifyContent: 'space-between', // Distribui melhor os 5 itens
+    justifyContent: 'space-around', // Distribuição uniforme
+  },
+  tabBarItem: {
+    height: 70, // Ocupa toda a altura da barra
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 0,
   },
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    height: '100%',
-    top: Platform.OS === 'ios' ? 10 : 0,
+    width: 50,
+    height: 50,
+    // Removido 'top' para garantir centralização vertical pura
   },
-  centerButtonWrapper: {
-    top: -35, // Flutua para fora da barra
+  centerButtonContainer: {
+    top: -25, // Eleva o botão para fora da barra
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
-    height: 70,
-    width: 70,
+    width: 80,
+    height: 80,
   },
   centerButton: {
     width: 72,
@@ -176,11 +163,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
+    // Sombras
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 6,
+    // Borda grossa da mesma cor da barra para criar o efeito de recorte
     borderWidth: 6,
     borderColor: '#121212', 
   },

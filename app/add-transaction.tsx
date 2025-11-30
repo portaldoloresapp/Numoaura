@@ -23,6 +23,13 @@ export default function AddTransactionScreen() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Função para limpar input e aceitar apenas números e vírgula/ponto
+  const handleAmountChange = (text: string) => {
+    // Remove tudo que não for número, vírgula ou ponto
+    const numericValue = text.replace(/[^0-9.,]/g, '');
+    setAmount(numericValue);
+  };
+
   const handleSave = async () => {
     if (!amount || !selectedCategory || !user) {
       Alert.alert('Atenção', 'Preencha o valor e selecione uma categoria.');
@@ -35,6 +42,10 @@ export default function AddTransactionScreen() {
       // Converter valor para número (substituindo vírgula por ponto)
       const numericAmount = parseFloat(amount.replace(',', '.'));
       
+      if (isNaN(numericAmount)) {
+          throw new Error('Valor inválido');
+      }
+
       const categorySlug = categories.find(c => c.id === selectedCategory)?.slug || 'outros';
 
       const { error } = await supabase.from('transactions').insert({
@@ -94,9 +105,9 @@ export default function AddTransactionScreen() {
             style={[styles.amountInput, { color: type === 'expense' ? COLORS.danger : COLORS.success }]}
             placeholder="0,00"
             placeholderTextColor={COLORS.textLight}
-            keyboardType="numeric"
+            keyboardType="numeric" // Teclado numérico
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={handleAmountChange}
             autoFocus
           />
         </View>

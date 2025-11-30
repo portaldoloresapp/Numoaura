@@ -3,18 +3,29 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator,
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { ArrowLeft, Save, Edit2, Plus, Minus, Target, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Edit2, Plus, Minus, Target, Trash2, Check, X } from 'lucide-react-native';
 import { Goal } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import DeleteModal from '../../components/DeleteModal';
 
 export default function GoalDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [goal, setGoal] = useState<Goal | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Estado para o Modal de Exclusão
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Edit Name State
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+
+  // Edit Target State
+  const [isEditingTarget, setIsEditingTarget] = useState(false);
+  const [newTargetAmount, setNewTargetAmount] = useState('');
 
   // Transaction State
   const [transactionMode, setTransactionMode] = useState<'deposit' | 'withdraw' | null>(null);
@@ -36,6 +47,7 @@ export default function GoalDetailsScreen() {
       if (error) throw error;
       setGoal(data);
       setNewTitle(data.title);
+      setNewTargetAmount(data.target_amount.toString());
     } catch (error: any) {
       Alert.alert('Erro', 'Não foi possível carregar a caixinha.');
       router.back();
@@ -44,6 +56,13 @@ export default function GoalDetailsScreen() {
     }
   };
 
+  // Helper para input numérico
+  const handleNumericInput = (text: string, setter: (val: string) => void) => {
+      const numericValue = text.replace(/[^0-9.,]/g, '');
+      setter(numericValue);
+  };
+
+  // Atualizar Título
   const handleUpdateTitle = async () => {
     if (!newTitle.trim()) return;
     
@@ -57,14 +76,38 @@ export default function GoalDetailsScreen() {
       
       setGoal(prev => prev ? { ...prev, title: newTitle } : null);
       setIsEditing(false);
-      Alert.alert('Sucesso', 'Nome atualizado!');
     } catch (error) {
       Alert.alert('Erro', 'Falha ao atualizar o nome.');
     }
   };
 
+  // Atualizar Meta
+  const handleUpdateTarget = async () => {
+    const targetValue = parseFloat(newTargetAmount.replace(',', '.'));
+    
+    if (isNaN(targetValue) || targetValue <= 0) {
+        Alert.alert('Valor Inválido', 'A meta deve ser maior que zero.');
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('goals')
+            .update({ target_amount: targetValue })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        setGoal(prev => prev ? { ...prev, target_amount: targetValue } : null);
+        setIsEditingTarget(false);
+        Alert.alert('Sucesso', 'Meta atualizada!');
+    } catch (error) {
+        Alert.alert('Erro', 'Falha ao atualizar a meta.');
+    }
+  };
+
   const handleTransaction = async () => {
-    if (!amount || !goal || !transactionMode) return;
+    if (!amount || !goal || !transactionMode || !user) return;
     
     const value = parseFloat(amount.replace(',', '.'));
     if (isNaN(value) || value <= 0) {
@@ -79,21 +122,51 @@ export default function GoalDetailsScreen() {
 
     setProcessing(true);
     try {
+      // 1. Calcular novo saldo da caixinha
       const newAmount = transactionMode === 'deposit' 
         ? goal.current_amount + value 
         : goal.current_amount - value;
 
-      const { error } = await supabase
+      // 2. Atualizar a Caixinha (Goal)
+      const { error: goalError } = await supabase
         .from('goals')
         .update({ current_amount: newAmount })
         .eq('id', id);
 
-      if (error) throw error;
+      if (goalError) throw goalError;
+
+      // 3. Criar registro na tabela de Transações (Saldo Principal)
+      const transactionType = transactionMode === 'deposit' ? 'expense' : 'income';
+      const description = transactionMode === 'deposit' 
+        ? `Depósito: ${goal.title}` 
+        : `Resgate: ${goal.title}`;
+
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+            user_id: user.id,
+            amount: value,
+            type: transactionType,
+            category: 'investimento',
+            description: description,
+            created_at: new Date().toISOString()
+        });
+
+      if (transactionError) {
+          console.error('Erro ao criar transação de espelho:', transactionError);
+      }
 
       setGoal({ ...goal, current_amount: newAmount });
       setAmount('');
       setTransactionMode(null);
-      Alert.alert('Sucesso', `Transação de ${transactionMode === 'deposit' ? 'depósito' : 'resgate'} realizada!`);
+      
+      Alert.alert(
+          'Sucesso', 
+          transactionMode === 'deposit' 
+            ? `R$ ${value.toFixed(2)} guardados!`
+            : `R$ ${value.toFixed(2)} resgatados!`
+      );
+
     } catch (error) {
       Alert.alert('Erro', 'Falha ao processar transação.');
     } finally {
@@ -101,26 +174,69 @@ export default function GoalDetailsScreen() {
     }
   };
 
-  const handleDelete = () => {
-      Alert.alert(
-          'Excluir Caixinha',
-          'Tem certeza que deseja excluir esta meta? O saldo será perdido se não for resgatado antes.',
-          [
-              { text: 'Cancelar', style: 'cancel' },
-              { 
-                  text: 'Excluir', 
-                  style: 'destructive', 
-                  onPress: async () => {
-                      const { error } = await supabase.from('goals').delete().eq('id', id);
-                      if (!error) {
-                          router.back();
-                      } else {
-                          Alert.alert('Erro', 'Não foi possível excluir.');
-                      }
-                  }
+  // Função chamada ao clicar no botão de lixeira
+  const handleDeletePress = () => {
+      if (!goal) return;
+      setDeleteModalVisible(true);
+  }
+
+  // Função chamada ao confirmar no modal
+  const confirmDelete = async () => {
+      if (!goal || !user) return;
+
+      setDeleting(true);
+      try {
+          // 1. RESGATE AUTOMÁTICO (Se houver saldo)
+          if (goal.current_amount > 0) {
+              const { error: refundError } = await supabase
+                .from('transactions')
+                .insert({
+                    user_id: user.id,
+                    amount: goal.current_amount,
+                    type: 'income', // Entra como receita na conta principal
+                    category: 'investimento',
+                    description: `Resgate: ${goal.title}`, // Nome limpo no extrato
+                    created_at: new Date().toISOString()
+                });
+
+              if (refundError) throw refundError;
+          }
+
+          // 2. EXCLUIR A CAIXINHA (Remove Nome, Meta, Icone, Tudo do banco de dados)
+          const { error } = await supabase.from('goals').delete().eq('id', id);
+          
+          if (error) throw error;
+          
+          setDeleteModalVisible(false);
+          
+          // 3. FEEDBACK E NAVEGAÇÃO
+          // Usamos setTimeout para garantir que o modal feche visualmente antes do Alert aparecer
+          setTimeout(() => {
+              if (goal.current_amount > 0) {
+                 Alert.alert(
+                     'Caixinha Excluída', 
+                     `A caixinha foi removida e o saldo de R$ ${goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foi devolvido à sua conta principal.`,
+                     [
+                         { text: 'OK', onPress: () => router.back() }
+                     ]
+                 );
+              } else {
+                 Alert.alert(
+                     'Caixinha Excluída', 
+                     'A meta foi removida permanentemente.',
+                     [
+                         { text: 'OK', onPress: () => router.back() }
+                     ]
+                 );
               }
-          ]
-      )
+          }, 300);
+
+      } catch (error: any) {
+          console.error(error);
+          Alert.alert('Erro', 'Não foi possível excluir a caixinha. Tente novamente.');
+      } finally {
+          setDeleting(false);
+      }
   }
 
   if (loading) {
@@ -135,6 +251,10 @@ export default function GoalDetailsScreen() {
 
   const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) : 0;
 
+  const deleteMessage = goal.current_amount > 0
+    ? `Esta caixinha possui R$ ${goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. \n\nAo excluir, este valor será resgatado automaticamente para o seu saldo principal.`
+    : "Tem certeza que deseja excluir esta meta? Todo o histórico dela será perdido.";
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <View style={styles.container}>
@@ -145,8 +265,13 @@ export default function GoalDetailsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
             <ArrowLeft size={24} color={COLORS.black} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalhes da Caixinha</Text>
-          <TouchableOpacity onPress={handleDelete} style={[styles.iconBtn, { backgroundColor: '#FFF0F0' }]}>
+          
+          <Text style={styles.headerTitle}>Detalhes</Text>
+          
+          <TouchableOpacity 
+            onPress={handleDeletePress} 
+            style={[styles.iconBtn, { backgroundColor: '#FFF0F0', borderColor: '#FFEBEE', borderWidth: 1 }]}
+          >
             <Trash2 size={20} color={COLORS.danger} />
           </TouchableOpacity>
         </View>
@@ -168,7 +293,7 @@ export default function GoalDetailsScreen() {
                   autoFocus
                 />
                 <TouchableOpacity onPress={handleUpdateTitle} style={styles.saveBtn}>
-                  <Save size={20} color={COLORS.white} />
+                  <Check size={18} color={COLORS.white} />
                 </TouchableOpacity>
               </View>
             ) : (
@@ -189,8 +314,41 @@ export default function GoalDetailsScreen() {
             <View style={styles.progressContainer}>
               <View style={styles.progressLabels}>
                 <Text style={styles.progressText}>{(progress * 100).toFixed(1)}% da meta</Text>
-                <Text style={styles.progressText}>Meta: {goal.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                
+                {/* EDITAR META */}
+                {isEditingTarget ? (
+                    <View style={styles.editTargetContainer}>
+                        <Text style={[styles.progressText, { marginRight: 4 }]}>Meta: R$</Text>
+                        <TextInput 
+                            style={styles.targetInput}
+                            value={newTargetAmount}
+                            onChangeText={(t) => handleNumericInput(t, setNewTargetAmount)}
+                            keyboardType="numeric"
+                            autoFocus
+                        />
+                        <TouchableOpacity onPress={handleUpdateTarget} style={styles.smallActionBtn}>
+                            <Check size={14} color={COLORS.success} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setIsEditingTarget(false)} style={styles.smallActionBtn}>
+                            <X size={14} color={COLORS.danger} />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <TouchableOpacity 
+                        style={styles.targetDisplay} 
+                        onPress={() => {
+                            setNewTargetAmount(goal.target_amount.toString());
+                            setIsEditingTarget(true);
+                        }}
+                    >
+                        <Text style={styles.progressText}>
+                            Meta: {goal.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </Text>
+                        <Edit2 size={12} color={COLORS.textSecondary} style={{ marginLeft: 6 }} />
+                    </TouchableOpacity>
+                )}
               </View>
+              
               <View style={styles.progressBarBg}>
                 <View style={[styles.progressBarFill, { width: `${Math.min(progress * 100, 100)}%` }]} />
               </View>
@@ -204,7 +362,7 @@ export default function GoalDetailsScreen() {
               onPress={() => setTransactionMode(transactionMode === 'deposit' ? null : 'deposit')}
             >
               <Plus size={24} color={COLORS.black} />
-              <Text style={styles.actionText}>Adicionar</Text>
+              <Text style={styles.actionText}>Guardar</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -220,7 +378,9 @@ export default function GoalDetailsScreen() {
           {transactionMode && (
             <View style={styles.transactionArea}>
               <Text style={styles.transactionTitle}>
-                {transactionMode === 'deposit' ? 'Quanto deseja guardar?' : 'Quanto deseja retirar?'}
+                {transactionMode === 'deposit' 
+                    ? 'Quanto deseja guardar? (Sai do Saldo Principal)' 
+                    : 'Quanto deseja resgatar? (Vai para o Saldo Principal)'}
               </Text>
               
               <View style={styles.inputWrapper}>
@@ -228,7 +388,7 @@ export default function GoalDetailsScreen() {
                 <TextInput
                   style={styles.amountInput}
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(t) => handleNumericInput(t, setAmount)}
                   keyboardType="numeric"
                   placeholder="0,00"
                   placeholderTextColor="#CCC"
@@ -257,6 +417,16 @@ export default function GoalDetailsScreen() {
           )}
 
         </ScrollView>
+
+        {/* Modal de Exclusão */}
+        <DeleteModal 
+            visible={deleteModalVisible}
+            onClose={() => setDeleteModalVisible(false)}
+            onConfirm={confirmDelete}
+            loading={deleting}
+            title="Excluir Caixinha"
+            message={deleteMessage}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -283,22 +453,21 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Inter_700Bold',
     color: COLORS.text,
   },
   iconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.white, // Fundo branco
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    // Sombras
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   content: {
     padding: SPACING.l,
@@ -376,12 +545,39 @@ const styles = StyleSheet.create({
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+    height: 30,
   },
   progressText: {
     color: COLORS.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
+  },
+  targetDisplay: {
+      flexDirection: 'row',
+      alignItems: 'center',
+  },
+  editTargetContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#333',
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2
+  },
+  targetInput: {
+      color: COLORS.white,
+      fontSize: 12,
+      fontFamily: 'Inter_600SemiBold',
+      minWidth: 50,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.primary,
+      padding: 0,
+      marginRight: 8
+  },
+  smallActionBtn: {
+      padding: 4,
   },
   progressBarBg: {
     height: 8,
@@ -433,9 +629,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   transactionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     marginBottom: SPACING.m,
+    textAlign: 'center',
+    color: COLORS.text
   },
   inputWrapper: {
     flexDirection: 'row',
