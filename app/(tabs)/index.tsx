@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, RefreshControl } from 'react-native';
-import { COLORS, SPACING } from '../../constants/theme';
-import { LayoutGrid, SlidersHorizontal, Plus, ChevronDown } from 'lucide-react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, RefreshControl, Modal } from 'react-native';
+import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
+import { LayoutGrid, SlidersHorizontal, Plus, CalendarDays, ChevronDown } from 'lucide-react-native';
 import SummaryCard from '../../components/SummaryCard';
 import RecentActivity from '../../components/RecentActivity';
 import ActionGrid from '../../components/ActionGrid';
@@ -14,6 +14,19 @@ import { Transaction } from '../../types';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import AnimatedTouchable from '../../components/AnimatedTouchable';
 import Skeleton from '../../components/Skeleton';
+import { format, parseISO, addDays, subDays, isSameDay, isToday, isYesterday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
+
+// Configuração do Calendário para Português
+LocaleConfig.locales['pt-br'] = {
+  monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+  monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+  dayNames: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+  dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+  today: 'Hoje'
+};
+LocaleConfig.defaultLocale = 'pt-br';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,11 +34,36 @@ export default function HomeScreen() {
   const { visibleWidgets } = usePreferences();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [balance, setBalance] = useState(0);
-  const [income, setIncome] = useState(0);
-  const [expense, setExpense] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Estado da Data
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  // Formatação abreviada: "21/02"
+  const formattedDate = format(selectedDate, 'dd/MM', { locale: ptBR });
+
+  // Lógica para o título do card
+  const dateLabel = useMemo(() => {
+    if (isToday(selectedDate)) return 'Balanço de Hoje';
+    if (isYesterday(selectedDate)) return 'Balanço de Ontem';
+    return `Balanço de ${format(selectedDate, 'dd/MM')}`;
+  }, [selectedDate]);
+
+  // --- Funções de Navegação de Data ---
+  const handlePrevDay = () => {
+      setSelectedDate(prev => subDays(prev, 1));
+  };
+
+  const handleNextDay = () => {
+      setSelectedDate(prev => addDays(prev, 1));
+  };
+
+  const handleToday = () => {
+      setSelectedDate(new Date());
+  };
+  // ------------------------------------
 
   const fetchData = async () => {
     if (!user) return;
@@ -41,18 +79,6 @@ export default function HomeScreen() {
 
         if (data) {
             setTransactions(data);
-
-            let totalIncome = 0;
-            let totalExpense = 0;
-
-            data.forEach((t: Transaction) => {
-                if (t.type === 'income') totalIncome += t.amount;
-                else totalExpense += t.amount;
-            });
-
-            setIncome(totalIncome);
-            setExpense(totalExpense);
-            setBalance(totalIncome - totalExpense);
         }
 
     } catch (error: any) {
@@ -68,10 +94,39 @@ export default function HomeScreen() {
     }, [user])
   );
 
+  // CÁLCULO DINÂMICO DO SALDO DIÁRIO
+  const dailyStats = useMemo(() => {
+    return transactions.reduce(
+        (acc, transaction) => {
+            const transactionDate = parseISO(transaction.created_at);
+            
+            if (isSameDay(transactionDate, selectedDate)) {
+                if (transaction.type === 'income') {
+                    acc.income += transaction.amount;
+                } else {
+                    acc.expense += transaction.amount;
+                }
+            }
+            return acc;
+        },
+        { income: 0, expense: 0 }
+    );
+  }, [transactions, selectedDate]);
+
+  const dailyBalance = dailyStats.income - dailyStats.expense;
+
   const onRefresh = async () => {
       setRefreshing(true);
       await fetchData();
       setRefreshing(false);
+  };
+
+  const handleDayPress = (day: any) => {
+      const date = new Date(day.timestamp); 
+      const correctedDate = addDays(date, 1); 
+      
+      setSelectedDate(correctedDate);
+      setShowCalendar(false);
   };
 
   return (
@@ -128,11 +183,12 @@ export default function HomeScreen() {
             {/* Sub Header Info */}
             <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.subHeader}>
                 <AnimatedTouchable 
-                  style={styles.walletSelector}
-                  onPress={() => {}}
+                    style={styles.dateDisplay}
+                    onPress={() => setShowCalendar(true)}
                 >
-                    <Text style={styles.walletText}>Conta Principal</Text>
-                    <ChevronDown size={16} color={COLORS.black} />
+                    <CalendarDays size={18} color={COLORS.black} />
+                    <Text style={styles.dateText}>{formattedDate}</Text>
+                    <ChevronDown size={14} color={COLORS.textSecondary} style={{ marginLeft: -4 }} />
                 </AnimatedTouchable>
                 <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
             </Animated.View>
@@ -145,7 +201,15 @@ export default function HomeScreen() {
             ) : (
               visibleWidgets.summary && (
                   <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
-                    <SummaryCard balance={balance} income={income} expense={expense} />
+                    <SummaryCard 
+                        balance={dailyBalance} 
+                        income={dailyStats.income} 
+                        expense={dailyStats.expense}
+                        label={dateLabel}
+                        onPrevDay={handlePrevDay}
+                        onNextDay={handleNextDay}
+                        onToday={handleToday}
+                    />
                   </Animated.View>
               )
             )}
@@ -182,6 +246,50 @@ export default function HomeScreen() {
 
         </ScrollView>
       </SafeAreaView>
+
+      {/* Modal de Calendário */}
+      <Modal
+        visible={showCalendar}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCalendar(false)}
+      >
+          <View style={styles.modalOverlay}>
+              <TouchableOpacity 
+                style={styles.modalBackdrop} 
+                activeOpacity={1} 
+                onPress={() => setShowCalendar(false)}
+              />
+              <View style={styles.calendarContainer}>
+                  <Calendar
+                    current={format(selectedDate, 'yyyy-MM-dd')}
+                    onDayPress={handleDayPress}
+                    theme={{
+                        backgroundColor: COLORS.white,
+                        calendarBackground: COLORS.white,
+                        textSectionTitleColor: COLORS.textSecondary,
+                        selectedDayBackgroundColor: COLORS.primary,
+                        selectedDayTextColor: COLORS.black,
+                        todayTextColor: COLORS.primary,
+                        dayTextColor: COLORS.text,
+                        textDisabledColor: '#d9e1e8',
+                        dotColor: COLORS.primary,
+                        selectedDotColor: COLORS.black,
+                        arrowColor: COLORS.black,
+                        monthTextColor: COLORS.black,
+                        indicatorColor: COLORS.black,
+                        textDayFontFamily: 'Inter_400Regular',
+                        textMonthFontFamily: 'Inter_700Bold',
+                        textDayHeaderFontFamily: 'Inter_600SemiBold',
+                    }}
+                    markedDates={{
+                        [format(selectedDate, 'yyyy-MM-dd')]: { selected: true, disableTouchEvent: true }
+                    }}
+                  />
+              </View>
+          </View>
+      </Modal>
+
     </View>
   );
 }
@@ -227,9 +335,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    backgroundColor: COLORS.white, // Fundo branco
+    backgroundColor: COLORS.white,
     borderRadius: 20,
-    // Sombras para destaque
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -260,43 +367,51 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       marginBottom: SPACING.s
   },
-  walletSelector: {
+  dateDisplay: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      padding: 4,
-      backgroundColor: COLORS.white, // Fundo branco
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      // Sombras para destaque
+      gap: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      backgroundColor: COLORS.white,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: '#F0F0F0',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
   },
-  walletText: {
+  dateText: {
       fontFamily: 'Inter_600SemiBold',
       fontSize: 14,
-      color: COLORS.black
+      color: COLORS.black,
   },
   welcomeText: {
       fontFamily: 'Inter_400Regular',
       fontSize: 14,
       color: COLORS.black,
   },
-  emptyState: {
+  // Modal Styles
+  modalOverlay: {
+      flex: 1,
+      justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 50,
-      gap: 8
+      backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  emptyStateText: {
-      fontFamily: 'Inter_600SemiBold',
-      color: COLORS.black
+  modalBackdrop: {
+      ...StyleSheet.absoluteFillObject,
   },
-  emptyStateLink: {
-      fontFamily: 'Inter_700Bold',
-      color: COLORS.black,
-      textDecorationLine: 'underline'
+  calendarContainer: {
+      width: '90%',
+      backgroundColor: COLORS.white,
+      borderRadius: 24,
+      padding: SPACING.m,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
   }
 });
