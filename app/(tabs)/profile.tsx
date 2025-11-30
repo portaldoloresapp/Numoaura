@@ -83,9 +83,15 @@ const styles = StyleSheet.create({
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: COLORS.gray,
+      backgroundColor: COLORS.white, // Fundo branco
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      // Sombras
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
   },
   screenTitle: {
       fontSize: 18,

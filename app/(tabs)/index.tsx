@@ -183,7 +183,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: COLORS.white, // Fundo branco
+    backgroundColor: COLORS.white,
   },
   safeArea: {
     flex: 1,
@@ -221,8 +221,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    backgroundColor: COLORS.gray, // Cinza claro para contrastar com o fundo branco
+    backgroundColor: COLORS.white, // Fundo branco
     borderRadius: 20,
+    // Sombras para destaque
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileContainer: {
       position: 'relative'
@@ -253,9 +259,15 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       gap: 4,
       padding: 4,
-      backgroundColor: COLORS.gray, // Cinza claro para visibilidade
+      backgroundColor: COLORS.white, // Fundo branco
       borderRadius: 12,
-      paddingHorizontal: 8
+      paddingHorizontal: 8,
+      // Sombras para destaque
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
   },
   walletText: {
       fontFamily: 'Inter_600SemiBold',

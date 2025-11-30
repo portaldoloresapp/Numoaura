@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter, Link } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { Mail, Lock, ArrowRight } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, Command } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
 export default function LoginScreen() {
@@ -27,7 +27,7 @@ export default function LoginScreen() {
       });
 
       if (error) {
-        setLoading(false); // Para o loading em caso de erro
+        setLoading(false);
         if (error.message.includes('Email not confirmed')) {
             Alert.alert(
                 'Email não confirmado', 
@@ -39,7 +39,6 @@ export default function LoginScreen() {
             Alert.alert('Erro ao entrar', error.message);
         }
       } else {
-        // Sucesso! Força o redirecionamento imediato
         if (data.session) {
             router.replace('/(tabs)');
         }
@@ -48,7 +47,6 @@ export default function LoginScreen() {
         setLoading(false);
         Alert.alert('Erro', e.message);
     }
-    // Nota: Não setamos setLoading(false) no sucesso para evitar "flicker" antes da troca de tela
   };
 
   return (
@@ -59,9 +57,18 @@ export default function LoginScreen() {
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
+            
+            {/* App Logo Section */}
+            <View style={styles.logoContainer}>
+                <View style={styles.logoBox}>
+                    <Command size={40} color={COLORS.black} />
+                </View>
+                <Text style={styles.appName}>Numoaura</Text>
+            </View>
+
             <View style={styles.header}>
-            <Text style={styles.title}>Bem-vindo de volta</Text>
-            <Text style={styles.subtitle}>Entre para gerenciar suas finanças</Text>
+                <Text style={styles.title}>Bem-vindo de volta</Text>
+                <Text style={styles.subtitle}>Entre para gerenciar suas finanças</Text>
             </View>
 
             <View style={styles.form}>
@@ -128,8 +135,28 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.l,
   },
+  logoContainer: {
+      alignItems: 'center',
+      marginBottom: SPACING.xl
+  },
+  logoBox: {
+      width: 80,
+      height: 80,
+      backgroundColor: COLORS.primary,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: SPACING.m,
+      transform: [{ rotate: '-10deg' }]
+  },
+  appName: {
+      fontSize: 24,
+      fontFamily: 'Inter_700Bold',
+      color: COLORS.white,
+      letterSpacing: 1
+  },
   header: {
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
   },
   title: {
     fontSize: 32,

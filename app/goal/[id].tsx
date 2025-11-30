@@ -290,9 +290,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.gray,
+    backgroundColor: COLORS.white, // Fundo branco
     justifyContent: 'center',
     alignItems: 'center',
+    // Sombras
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   content: {
     padding: SPACING.l,
