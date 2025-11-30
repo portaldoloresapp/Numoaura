@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
+import { uploadImageToSupabase } from '../../lib/storage'; // Importando o novo serviço
 import { Mail, Lock, User, ArrowLeft, Building2, Camera, Briefcase, Command } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,21 +20,26 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para escolher o logotipo.');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada', 'Precisamos de acesso à sua galeria para escolher o logotipo.');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
 
-    if (!result.canceled) {
-      setLogoUri(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) {
+        setLogoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Falha ao abrir a galeria.');
     }
   };
 
@@ -46,30 +52,47 @@ export default function SignUpScreen() {
     setLoading(true);
     
     try {
-      const metadata = {
+      const initialMetadata = {
         full_name: name,
         account_type: accountType,
-        avatar_url: logoUri || null 
       };
 
+      // 1. Criar Usuário
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: metadata,
+          data: initialMetadata,
         },
       });
 
       if (error) throw error;
 
+      // 2. Upload da Imagem (Se houver e for conta Business)
+      if (data.user && logoUri && accountType === 'business') {
+        if (data.session) {
+            // Uso do serviço robusto de storage
+            const publicUrl = await uploadImageToSupabase(data.user.id, logoUri);
+
+            if (publicUrl) {
+                await supabase.auth.updateUser({
+                    data: { avatar_url: publicUrl }
+                });
+            }
+            // Se publicUrl for null, o erro já foi tratado e alertado pelo serviço,
+            // o fluxo segue sem quebrar o cadastro.
+        }
+      }
+
+      setLoading(false);
+
       if (data.session) {
         Alert.alert('Sucesso', 'Conta criada com sucesso!');
         router.replace('/(tabs)');
       } else if (data.user && !data.session) {
-        setLoading(false);
         Alert.alert(
           'Verifique seu Email',
-          'Sua conta foi criada! Enviamos um link de confirmação para o seu email.'
+          'Sua conta foi criada! Enviamos um link de confirmação.'
         );
         router.replace('/auth/login');
       }
@@ -93,8 +116,6 @@ export default function SignUpScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                 <ArrowLeft size={24} color={COLORS.white} />
             </TouchableOpacity>
-            
-            {/* App Logo Small */}
             <View style={styles.appLogoSmall}>
                 <Command size={20} color={COLORS.black} />
             </View>
@@ -105,7 +126,6 @@ export default function SignUpScreen() {
             <Text style={styles.subtitle}>Escolha o tipo de conta ideal para você</Text>
           </View>
 
-          {/* Account Type Selector */}
           <View style={styles.typeSelector}>
             <TouchableOpacity 
                 style={[styles.typeBtn, accountType === 'personal' && styles.activeTypeBtn]}
@@ -126,7 +146,6 @@ export default function SignUpScreen() {
 
           <View style={styles.form}>
             
-            {/* Business Logo Upload */}
             {accountType === 'business' && (
                 <View style={styles.logoUploadContainer}>
                     <TouchableOpacity style={styles.logoButton} onPress={pickImage}>

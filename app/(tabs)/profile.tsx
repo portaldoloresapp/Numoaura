@@ -24,9 +24,25 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-      { id: 1, label: 'Dados Pessoais', icon: User, action: () => {} },
-      { id: 2, label: 'Configurações', icon: Settings, action: () => {} },
-      { id: 3, label: 'Sair', icon: LogOut, color: COLORS.danger, action: handleLogoutPress },
+      { 
+        id: 1, 
+        label: 'Dados Pessoais', 
+        icon: User, 
+        action: () => router.push('/settings/personal-data') // Rota atualizada
+      },
+      { 
+        id: 2, 
+        label: 'Configurações', 
+        icon: Settings, 
+        action: () => {} 
+      },
+      { 
+        id: 3, 
+        label: 'Sair', 
+        icon: LogOut, 
+        color: COLORS.danger, 
+        action: handleLogoutPress 
+      },
   ];
 
   return (
