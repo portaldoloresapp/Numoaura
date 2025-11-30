@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
@@ -14,6 +14,10 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Refs para navegação entre inputs
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
   
   // Estados para o Logo/Avatar via Link
   const [logoUrl, setLogoUrl] = useState('');
@@ -109,7 +113,7 @@ export default function SignUpScreen() {
       style={styles.container}
     >
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           
           <View style={styles.topNav}>
@@ -186,6 +190,8 @@ export default function SignUpScreen() {
                                 autoCorrect={false}
                                 keyboardType="url"
                                 autoFocus
+                                returnKeyType="done"
+                                onSubmitEditing={handleApplyUrl}
                             />
                         </View>
                         <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
@@ -219,12 +225,16 @@ export default function SignUpScreen() {
                 placeholderTextColor={COLORS.textSecondary}
                 value={name}
                 onChangeText={setName}
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputContainer}>
               <Mail size={20} color={COLORS.textSecondary} />
               <TextInput
+                ref={emailRef}
                 style={styles.input}
                 placeholder={accountType === 'personal' ? "Seu Email" : "Email Corporativo"}
                 placeholderTextColor={COLORS.textSecondary}
@@ -232,18 +242,24 @@ export default function SignUpScreen() {
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputContainer}>
               <Lock size={20} color={COLORS.textSecondary} />
               <TextInput
+                ref={passwordRef}
                 style={styles.input}
                 placeholder="Senha"
                 placeholderTextColor={COLORS.textSecondary}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleSignUp}
               />
             </View>
 

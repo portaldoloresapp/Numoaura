@@ -109,6 +109,8 @@ export default function AddTransactionScreen() {
             value={amount}
             onChangeText={handleAmountChange}
             autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
           />
         </View>
 

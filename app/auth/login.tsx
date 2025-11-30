@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
@@ -13,6 +13,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Referência para o campo de senha
+  const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -57,7 +60,7 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
             
             {/* App Logo Section */}
@@ -77,25 +80,31 @@ export default function LoginScreen() {
             <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.inputContainer}>
                 <Mail size={20} color={COLORS.textSecondary} />
                 <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={COLORS.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
                 />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.inputContainer}>
                 <Lock size={20} color={COLORS.textSecondary} />
                 <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                placeholderTextColor={COLORS.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
+                    ref={passwordRef}
+                    style={styles.input}
+                    placeholder="Senha"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    returnKeyType="go"
+                    onSubmitEditing={handleLogin}
                 />
             </Animated.View>
 

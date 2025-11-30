@@ -49,8 +49,10 @@ export default function GoalDetailsScreen() {
       setNewTitle(data.title);
       setNewTargetAmount(data.target_amount.toString());
     } catch (error: any) {
-      Alert.alert('Erro', 'Não foi possível carregar a caixinha.');
-      router.back();
+      // Se der erro (ex: deletado), volta pra tela anterior
+      if (router.canGoBack()) {
+          router.back();
+      }
     } finally {
       setLoading(false);
     }
@@ -127,7 +129,15 @@ export default function GoalDetailsScreen() {
       const isFullWithdrawal = transactionMode === 'withdraw' && Math.abs(value - goal.current_amount) < 0.01;
 
       if (isFullWithdrawal) {
-          // 1. Registrar Transação de Entrada (Reembolso para conta principal)
+          // 1. Zerar a caixinha primeiro para evitar inconsistência
+          const { error: updateError } = await supabase
+            .from('goals')
+            .update({ current_amount: 0 })
+            .eq('id', id);
+            
+          if (updateError) throw updateError;
+
+          // 2. Registrar Transação de Entrada (Reembolso para conta principal)
           const { error: transError } = await supabase
             .from('transactions')
             .insert({
@@ -141,24 +151,15 @@ export default function GoalDetailsScreen() {
 
           if (transError) throw transError;
 
-          // 2. Excluir a Caixinha Automaticamente
-          const { error: deleteError } = await supabase
-            .from('goals')
-            .delete()
-            .eq('id', id);
+          // ATUALIZAÇÃO: Não exclui automaticamente. Apenas zera e avisa.
+          setGoal({ ...goal, current_amount: 0 });
+          setAmount('');
+          setTransactionMode(null);
 
-          if (deleteError) throw deleteError;
-
-          // UX Melhorada: Navegar apenas após o usuário confirmar a leitura do alerta
           Alert.alert(
-              'Caixinha Encerrada', 
-              `Você resgatou todo o valor (R$ ${value.toFixed(2)}). A caixinha foi encerrada com sucesso.`,
-              [
-                  { 
-                      text: 'OK', 
-                      onPress: () => router.back() 
-                  }
-              ]
+              'Resgate Concluído', 
+              `Você resgatou todo o valor (R$ ${value.toFixed(2)}). A caixinha agora está vazia e pode ser excluída se desejar.`,
+              [{ text: 'OK' }]
           );
           return;
       }
@@ -218,6 +219,16 @@ export default function GoalDetailsScreen() {
   // Função chamada ao clicar no botão de lixeira (Exclusão Manual)
   const handleDeletePress = () => {
       if (!goal) return;
+
+      // BLOQUEIO: Se tiver saldo, não permite abrir o modal de exclusão
+      if (goal.current_amount > 0) {
+          Alert.alert(
+              'Caixinha com Saldo',
+              `Você ainda tem R$ ${goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} nesta caixinha.\n\nPor favor, faça o resgate total do valor antes de excluí-la.`
+          );
+          return;
+      }
+
       setDeleteModalVisible(true);
   }
 
@@ -227,40 +238,22 @@ export default function GoalDetailsScreen() {
 
       setDeleting(true);
       try {
-          // 1. RESGATE AUTOMÁTICO (Se houver saldo)
-          if (goal.current_amount > 0) {
-              const { error: refundError } = await supabase
-                .from('transactions')
-                .insert({
-                    user_id: user.id,
-                    amount: goal.current_amount,
-                    type: 'income',
-                    category: 'investimento',
-                    description: `Resgate: ${goal.title}`,
-                    created_at: new Date().toISOString()
-                });
-
-              if (refundError) throw refundError;
-          }
-
-          // 2. EXCLUIR A CAIXINHA
+          // Como já garantimos que o saldo é 0 no handleDeletePress, podemos excluir direto
           const { error } = await supabase.from('goals').delete().eq('id', id);
           
           if (error) throw error;
           
           setDeleteModalVisible(false);
           
-          setTimeout(() => {
-             Alert.alert(
-                 'Caixinha Excluída', 
-                 'Item removido com sucesso.',
-                 [{ text: 'OK', onPress: () => router.back() }]
-             );
-          }, 300);
+          Alert.alert(
+              'Caixinha Excluída', 
+              'A caixinha foi removida com sucesso.',
+              [{ text: 'OK', onPress: () => router.back() }]
+          );
 
       } catch (error: any) {
           console.error(error);
-          Alert.alert('Erro', 'Não foi possível excluir a caixinha.');
+          Alert.alert('Erro', 'Ocorreu um erro ao excluir. Tente novamente.');
       } finally {
           setDeleting(false);
       }
@@ -277,10 +270,6 @@ export default function GoalDetailsScreen() {
   if (!goal) return null;
 
   const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) : 0;
-
-  const deleteMessage = goal.current_amount > 0
-    ? `Esta caixinha possui R$ ${goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. \n\nAo excluir, este valor será resgatado automaticamente para o seu saldo principal.`
-    : "Tem certeza que deseja excluir esta meta? Todo o histórico dela será perdido.";
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -303,12 +292,13 @@ export default function GoalDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           
           {/* Title Section */}
           <View style={styles.titleSection}>
-            <View style={[styles.iconBox, { backgroundColor: goal.color || '#EEE' }]}>
-                <Target size={32} color={COLORS.black} />
+            {/* Ícone Preto e Branco */}
+            <View style={[styles.iconBox, { backgroundColor: COLORS.black }]}>
+                <Target size={32} color={COLORS.white} />
             </View>
             
             {isEditing ? (
@@ -318,6 +308,8 @@ export default function GoalDetailsScreen() {
                   value={newTitle}
                   onChangeText={setNewTitle}
                   autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleUpdateTitle}
                 />
                 <TouchableOpacity onPress={handleUpdateTitle} style={styles.saveBtn}>
                   <Check size={18} color={COLORS.white} />
@@ -352,6 +344,8 @@ export default function GoalDetailsScreen() {
                             onChangeText={(t) => handleNumericInput(t, setNewTargetAmount)}
                             keyboardType="numeric"
                             autoFocus
+                            returnKeyType="done"
+                            onSubmitEditing={handleUpdateTarget}
                         />
                         <TouchableOpacity onPress={handleUpdateTarget} style={styles.smallActionBtn}>
                             <Check size={14} color={COLORS.success} />
@@ -420,6 +414,8 @@ export default function GoalDetailsScreen() {
                   placeholder="0,00"
                   placeholderTextColor="#CCC"
                   autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleTransaction}
                 />
               </View>
 
@@ -439,7 +435,7 @@ export default function GoalDetailsScreen() {
                     { color: transactionMode === 'deposit' ? COLORS.black : COLORS.white }
                   ]}>
                     {transactionMode === 'withdraw' && parseFloat(amount.replace(',', '.') || '0') >= goal.current_amount 
-                        ? 'Resgatar Tudo e Encerrar' 
+                        ? 'Resgatar Tudo' 
                         : 'Confirmar'}
                   </Text>
                 )}
@@ -449,14 +445,14 @@ export default function GoalDetailsScreen() {
 
         </ScrollView>
 
-        {/* Modal de Exclusão */}
+        {/* Modal de Exclusão (Agora só aparece se saldo for 0) */}
         <DeleteModal 
             visible={deleteModalVisible}
             onClose={() => setDeleteModalVisible(false)}
             onConfirm={confirmDelete}
             loading={deleting}
             title="Excluir Caixinha"
-            message={deleteMessage}
+            message="Tem certeza que deseja excluir esta meta? O histórico será perdido."
         />
       </View>
     </KeyboardAvoidingView>

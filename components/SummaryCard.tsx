@@ -36,15 +36,18 @@ export default function SummaryCard({
             </Text>
             
             <View style={styles.badgesRow}>
-                <View style={[styles.badge, { backgroundColor: '#E8F5E9' }]}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={[styles.badgeText, { color: COLORS.success }]}>
+                {/* Income Badge: White Background, Black Text */}
+                <View style={[styles.badge, { backgroundColor: COLORS.white }]}>
+                    <TrendingUp size={12} color={COLORS.black} />
+                    <Text style={[styles.badgeText, { color: COLORS.black }]}>
                         {income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: '#FFEBEE' }]}>
-                    <TrendingDown size={12} color={COLORS.danger} />
-                    <Text style={[styles.badgeText, { color: COLORS.danger }]}>
+
+                {/* Expense Badge: Black Background, White Text (with subtle border for contrast) */}
+                <View style={[styles.badge, { backgroundColor: COLORS.black, borderWidth: 1, borderColor: '#333' }]}>
+                    <TrendingDown size={12} color={COLORS.white} />
+                    <Text style={[styles.badgeText, { color: COLORS.white }]}>
                         {expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </Text>
                 </View>

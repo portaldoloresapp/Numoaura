@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -37,6 +37,9 @@ export default function PersonalDataScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loadingPassword, setLoadingPassword] = useState(false);
+
+  // Ref para navegação de foco
+  const confirmPasswordRef = useRef<TextInput>(null);
 
   const defaultAvatar = 'https://i.pravatar.cc/150?u=default';
 
@@ -144,7 +147,7 @@ export default function PersonalDataScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
@@ -180,6 +183,8 @@ export default function PersonalDataScreen() {
                             autoCapitalize="none"
                             autoCorrect={false}
                             keyboardType="url"
+                            returnKeyType="done"
+                            onSubmitEditing={handleApplyUrl}
                         />
                     </View>
                     <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
@@ -205,6 +210,8 @@ export default function PersonalDataScreen() {
                 onChangeText={setName}
                 placeholder="Nome Completo"
                 placeholderTextColor={COLORS.textLight}
+                returnKeyType="done"
+                onSubmitEditing={handleUpdateProfile}
               />
             </View>
 
@@ -239,18 +246,24 @@ export default function PersonalDataScreen() {
                 placeholder="Nova Senha"
                 placeholderTextColor={COLORS.textLight}
                 secureTextEntry
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                blurOnSubmit={false}
               />
             </View>
 
             <View style={styles.inputContainer}>
               <Lock size={20} color={COLORS.textSecondary} />
               <TextInput
+                ref={confirmPasswordRef}
                 style={styles.input}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder="Confirmar Nova Senha"
                 placeholderTextColor={COLORS.textLight}
                 secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleChangePassword}
               />
             </View>
 

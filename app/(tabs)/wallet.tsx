@@ -66,7 +66,6 @@ export default function WalletScreen() {
         .single();
 
       if (!error && data) {
-          // Adiciona localmente para animação imediata
           setGoals([data, ...goals]);
           router.push(`/goal/${data.id}`);
       } else {
@@ -81,27 +80,43 @@ export default function WalletScreen() {
     
     return (
         <Animated.View 
-            entering={FadeInDown.delay(index * 100).springify()} 
+            entering={FadeInDown.delay(index * 50).springify()} 
             exiting={FadeOut}
             layout={Layout.springify()}
         >
             <AnimatedTouchable 
-                style={styles.card} 
+                style={styles.itemContainer} 
                 onPress={() => router.push(`/goal/${item.id}`)}
             >
-                <View style={[styles.iconBox, { backgroundColor: item.color || '#EEE' }]}>
-                    <Target size={24} color={COLORS.black} />
-                </View>
-                <View style={styles.cardInfo}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <View style={styles.progressBg}>
-                        <View style={[styles.progressFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: COLORS.primary }]} />
+                <View style={styles.left}>
+                    {/* Ícone padronizado com fundo preto igual ao Histórico */}
+                    <View style={styles.iconBox}>
+                        <Target size={20} color={COLORS.white} />
                     </View>
-                    <Text style={styles.cardGoal}>Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
+                    
+                    <View style={styles.textContainer}>
+                        <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+                        
+                        {/* Barra de Progresso Compacta */}
+                        <View style={styles.progressWrapper}>
+                            <View style={styles.progressBg}>
+                                <View style={[
+                                    styles.progressFill, 
+                                    { width: `${Math.min(progress * 100, 100)}%` }
+                                ]} />
+                            </View>
+                            <Text style={styles.metaText}>
+                                Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </Text>
+                        </View>
+                    </View>
                 </View>
-                <View style={styles.amountInfo}>
-                    <Text style={styles.cardAmount}>{item.current_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Text>
-                    <Text style={styles.percentage}>{(progress * 100).toFixed(0)}%</Text>
+
+                <View style={styles.right}>
+                    <Text style={styles.amountText}>
+                        {item.current_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </Text>
+                    <Text style={styles.percentageText}>{(progress * 100).toFixed(0)}%</Text>
                 </View>
             </AnimatedTouchable>
         </Animated.View>
@@ -136,9 +151,18 @@ export default function WalletScreen() {
 
       {loading ? (
           <View style={styles.listContent}>
-              <Skeleton height={80} borderRadius={20} />
-              <Skeleton height={80} borderRadius={20} />
-              <Skeleton height={80} borderRadius={20} />
+              {[1,2,3].map(i => (
+                  <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 16 }}>
+                      <View style={{ flexDirection: 'row', gap: 12 }}>
+                          <Skeleton width={40} height={40} borderRadius={20} />
+                          <View style={{ gap: 4 }}>
+                              <Skeleton width={120} height={14} />
+                              <Skeleton width={80} height={12} />
+                          </View>
+                      </View>
+                      <Skeleton width={80} height={14} />
+                  </View>
+              ))}
           </View>
       ) : (
         <Animated.FlatList
@@ -184,11 +208,19 @@ const styles = StyleSheet.create({
       borderRadius: 20,
       backgroundColor: COLORS.black,
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2
   },
   summary: {
       paddingHorizontal: SPACING.l,
-      marginBottom: SPACING.l
+      marginBottom: SPACING.l,
+      paddingBottom: SPACING.m,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5'
   },
   summaryLabel: {
       fontSize: 14,
@@ -198,76 +230,87 @@ const styles = StyleSheet.create({
   summaryValue: {
       fontSize: 32,
       fontFamily: 'Inter_700Bold',
-      color: COLORS.primary,
+      color: COLORS.primary, // Mantendo o verde vibrante para o total
       marginTop: 4
   },
   listContent: {
       paddingHorizontal: SPACING.l,
-      gap: SPACING.m,
       paddingBottom: 100
   },
-  card: {
+  // Estilo de Lista (Igual ao Histórico)
+  itemContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: SPACING.m,
+      borderBottomWidth: 1,
+      borderBottomColor: '#F5F5F5',
+      width: '100%',
+  },
+  left: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: SPACING.m,
-      backgroundColor: COLORS.white,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: COLORS.gray,
-      gap: SPACING.m,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.03,
-      shadowRadius: 8,
-      elevation: 2
+      gap: 12,
+      flex: 1,
+      marginRight: 8,
   },
   iconBox: {
-      width: 50,
-      height: 50,
-      borderRadius: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: COLORS.dark, // Fundo preto consistente
       justifyContent: 'center',
-      alignItems: 'center'
+      alignItems: 'center',
+      flexShrink: 0,
   },
-  cardInfo: {
+  textContainer: {
       flex: 1,
-      gap: 6
+      gap: 4
   },
-  cardTitle: {
+  itemTitle: {
       fontSize: 14,
       fontFamily: 'Inter_600SemiBold',
-      color: COLORS.text
+      color: COLORS.text,
+  },
+  progressWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8
   },
   progressBg: {
       height: 4,
       backgroundColor: '#F0F0F0',
       borderRadius: 2,
-      width: '100%'
+      width: 60
   },
   progressFill: {
       height: '100%',
+      backgroundColor: COLORS.primary,
       borderRadius: 2
   },
-  cardGoal: {
+  metaText: {
       fontSize: 10,
+      fontFamily: 'Inter_400Regular',
       color: COLORS.textSecondary
   },
-  amountInfo: {
+  right: {
       alignItems: 'flex-end',
-      gap: 4
+      gap: 2
   },
-  cardAmount: {
+  amountText: {
       fontSize: 14,
       fontFamily: 'Inter_700Bold',
-      color: COLORS.text
+      color: COLORS.text,
   },
-  percentage: {
+  percentageText: {
       fontSize: 12,
       fontFamily: 'Inter_600SemiBold',
       color: COLORS.success
   },
   emptyContainer: {
       alignItems: 'center',
-      marginTop: 40
+      marginTop: 60,
+      gap: 8
   },
   emptyText: {
       fontSize: 16,
@@ -277,6 +320,5 @@ const styles = StyleSheet.create({
   emptySubText: {
       fontSize: 14,
       color: COLORS.textLight,
-      marginTop: 8
   }
 });
