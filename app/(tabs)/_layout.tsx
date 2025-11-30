@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { House, Box, User, History, Plus } from 'lucide-react-native';
+import { House, Box, History, Plus, MoreHorizontal } from 'lucide-react-native';
 import { COLORS } from '../../constants/theme';
 
 export default function TabLayout() {
@@ -23,24 +23,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* 1. Caixinhas (Esquerda) */}
-      <Tabs.Screen
-        name="wallet"
-        options={{
-          title: 'Caixinhas',
-          tabBarIcon: ({ focused }) => (
-            <View style={styles.iconContainer}>
-                <Box 
-                size={30} 
-                color={focused ? COLORS.white : '#666'} 
-                strokeWidth={focused ? 2.5 : 2}
-                />
-            </View>
-          ),
-        }}
-      />
-
-      {/* 2. Home (Centro-Esquerda) - Ajuste de ordem se necessário, mas mantendo a lógica anterior */}
+      {/* 1. Home (Início) */}
        <Tabs.Screen
         name="index"
         options={{
@@ -48,7 +31,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <House 
-                size={30} 
+                size={28} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -57,7 +40,24 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. BOTÃO ADICIONAR (Centro - Destaque) */}
+      {/* 2. Caixinhas (Carteira) */}
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          title: 'Caixinhas',
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+                <Box 
+                size={28} 
+                color={focused ? COLORS.white : '#666'} 
+                strokeWidth={focused ? 2.5 : 2}
+                />
+            </View>
+          ),
+        }}
+      />
+
+      {/* 3. BOTÃO ADICIONAR (Centro) */}
       <Tabs.Screen
         name="add_placeholder"
         options={{
@@ -79,7 +79,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. Histórico (Antigo Estatísticas) */}
+      {/* 4. Histórico (Restaurado) */}
       <Tabs.Screen
         name="history"
         options={{
@@ -87,7 +87,7 @@ export default function TabLayout() {
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
                 <History 
-                size={30} 
+                size={28} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -96,15 +96,15 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 5. Perfil */}
+      {/* 5. Menu (Mais / 3 Pontos) */}
       <Tabs.Screen
-        name="profile"
+        name="menu"
         options={{
-          title: 'Perfil',
+          title: 'Menu',
           tabBarIcon: ({ focused }) => (
             <View style={styles.iconContainer}>
-                <User 
-                size={30} 
+                <MoreHorizontal 
+                size={28} 
                 color={focused ? COLORS.white : '#666'} 
                 strokeWidth={focused ? 2.5 : 2}
                 />
@@ -112,6 +112,25 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/* -- ROTAS OCULTAS DA BARRA -- */}
+      
+      {/* Perfil */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null, // Oculta da barra
+        }}
+      />
+
+      {/* Estatísticas */}
+      <Tabs.Screen
+        name="statistics"
+        options={{
+          href: null, // Oculta da barra
+        }}
+      />
+
     </Tabs>
   );
 }
@@ -134,7 +153,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between', // Distribui melhor os 5 itens
   },
   iconContainer: {
     justifyContent: 'center',
