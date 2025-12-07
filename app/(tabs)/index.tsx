@@ -239,7 +239,8 @@ export default function HomeScreen() {
                     <Skeleton height={60} borderRadius={16} />
                   </View>
                 ) : (
-                  <RecentActivity transactions={transactions} />
+                  // LIMITADO A 6 ITENS
+                  <RecentActivity transactions={transactions.slice(0, 6)} />
                 )}
               </Animated.View>
           )}

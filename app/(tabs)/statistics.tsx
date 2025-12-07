@@ -116,9 +116,9 @@ export default function StatisticsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.paddingWrapper}>
-          {/* Header com navegação corrigida para o Menu */}
+          {/* Header com navegação corrigida para voltar à tela anterior */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/menu')} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <ArrowLeft size={24} color={COLORS.black} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Modo Avançado</Text>
