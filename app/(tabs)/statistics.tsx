@@ -8,6 +8,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Transaction } from '../../types';
 import { format, subMonths, isSameMonth, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ChartsCarousel from '../../components/ChartsCarousel';
+import AnimatedTouchable from '../../components/AnimatedTouchable'; // Importando para animação igual ao histórico
 
 export default function StatisticsScreen() {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function StatisticsScreen() {
   const [loading, setLoading] = useState(true);
   
   // Dados Reais
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
   const [income, setIncome] = useState(0);
   const [expense, setExpense] = useState(0);
@@ -40,6 +43,7 @@ export default function StatisticsScreen() {
       if (error) throw error;
 
       if (data) {
+        setTransactions(data);
         processData(data);
       }
     } catch (error) {
@@ -115,7 +119,7 @@ export default function StatisticsScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.paddingWrapper}>
+        
           {/* Header com navegação corrigida para voltar à tela anterior */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -125,21 +129,34 @@ export default function StatisticsScreen() {
             <View style={{ width: 40 }} />
           </View>
 
-          {/* Filters */}
-          <View style={styles.filters}>
-            {filters.map((filter) => (
-              <TouchableOpacity 
-                key={filter} 
-                style={[styles.filterItem, activeFilter === filter && styles.activeFilter]}
-                onPress={() => setActiveFilter(filter)}
-              >
-                <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>
-                  {filter}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Filters - Estilo Igual ao Histórico */}
+          <View style={styles.filterContainer}>
+            <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.filterContent}
+            >
+                {filters.map((filter) => (
+                <AnimatedTouchable 
+                    key={filter} 
+                    style={[
+                        styles.filterChip, 
+                        activeFilter === filter && styles.activeFilterChip
+                    ]}
+                    onPress={() => setActiveFilter(filter)}
+                >
+                    <Text style={[
+                        styles.filterText, 
+                        activeFilter === filter && styles.activeFilterText
+                    ]}>
+                    {filter}
+                    </Text>
+                </AnimatedTouchable>
+                ))}
+            </ScrollView>
           </View>
 
+        <View style={styles.paddingWrapper}>
           {loading ? (
              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 50 }} />
           ) : (
@@ -181,18 +198,9 @@ export default function StatisticsScreen() {
                   </View>
                 </View>
 
+                {/* Carrossel de Gráficos */}
                 <View style={styles.chartWidget}>
-                  {/* Gráfico Radar Visual Simplificado (Decorativo) */}
-                  <View style={styles.radarChartPlaceholder}>
-                      <View style={styles.radarLine1} />
-                      <View style={styles.radarLine2} />
-                      <View style={styles.radarLine3} />
-                      <View style={styles.radarShape} />
-                  </View>
-                  <View style={styles.chartLabel}>
-                      <View style={styles.dot} />
-                      <Text style={styles.chartLabelText}>Análise</Text>
-                  </View>
+                   <ChartsCarousel transactions={transactions} />
                 </View>
               </View>
 
@@ -289,6 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: SPACING.m,
+    paddingHorizontal: SPACING.l,
   },
   backBtn: {
     width: 40,
@@ -303,46 +312,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     color: COLORS.text,
   },
-  filters: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.l,
+  // --- Novos Estilos de Filtro (Igual ao Histórico) ---
+  filterContainer: {
+    paddingBottom: SPACING.m,
+    marginBottom: SPACING.s,
   },
-  filterItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
+  filterContent: {
+      paddingHorizontal: SPACING.l,
+      gap: 8
   },
-  activeFilter: {
-    backgroundColor: COLORS.primary,
+  filterChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: COLORS.gray,
+      borderWidth: 1,
+      borderColor: 'transparent'
+  },
+  activeFilterChip: {
+      backgroundColor: COLORS.black,
+      borderColor: COLORS.black
   },
   filterText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: COLORS.textSecondary,
+      fontSize: 12,
+      fontFamily: 'Inter_600SemiBold',
+      color: COLORS.textSecondary
   },
   activeFilterText: {
-    color: COLORS.black,
+      color: COLORS.white
   },
+  // ---------------------------------------------------
   widgetsRow: {
     flexDirection: 'row',
     gap: SPACING.m,
     marginBottom: SPACING.l,
+    height: 180, // Altura fixa para garantir alinhamento
   },
   earningWidget: {
     flex: 1.5,
     backgroundColor: COLORS.primary,
     borderRadius: 24,
     padding: SPACING.m,
+    justifyContent: 'space-between'
   },
   chartWidget: {
     flex: 1,
-    backgroundColor: COLORS.dark,
-    borderRadius: 24,
-    padding: SPACING.m,
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   widgetHeader: {
     flexDirection: 'row',
@@ -387,58 +401,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: COLORS.black,
     borderRadius: 3,
-  },
-  radarChartPlaceholder: {
-      width: 60,
-      height: 60,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative'
-  },
-  radarLine1: {
-      position: 'absolute',
-      width: '100%',
-      height: 1,
-      backgroundColor: '#333',
-      transform: [{rotate: '0deg'}]
-  },
-  radarLine2: {
-      position: 'absolute',
-      width: '100%',
-      height: 1,
-      backgroundColor: '#333',
-      transform: [{rotate: '60deg'}]
-  },
-  radarLine3: {
-      position: 'absolute',
-      width: '100%',
-      height: 1,
-      backgroundColor: '#333',
-      transform: [{rotate: '-60deg'}]
-  },
-  radarShape: {
-      width: 30,
-      height: 30,
-      backgroundColor: 'rgba(193, 242, 176, 0.2)',
-      borderWidth: 1,
-      borderColor: COLORS.primary,
-      transform: [{rotate: '45deg'}]
-  },
-  chartLabel: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 8
-  },
-  dot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: COLORS.primary
-  },
-  chartLabelText: {
-      color: COLORS.white,
-      fontSize: 10
   },
   sectionTitle: {
       fontSize: 18,
