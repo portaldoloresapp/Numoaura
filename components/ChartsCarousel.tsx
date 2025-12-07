@@ -9,6 +9,7 @@ import { ptBR } from 'date-fns/locale';
 
 const CHART_SIZE = 80;
 const RADIUS = CHART_SIZE / 2;
+const SLIDE_WIDTH = 130; // Largura fixa do slide para o cálculo do snap
 
 interface ChartsCarouselProps {
   transactions: Transaction[];
@@ -133,11 +134,12 @@ export default function ChartsCarousel({ transactions }: ChartsCarouselProps) {
   ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const slideSize = event.nativeEvent.layoutMeasurement.width;
-    const index = event.nativeEvent.contentOffset.x / slideSize;
-    const roundIndex = Math.round(index);
-    if (roundIndex !== activeIndex) {
-      setActiveIndex(roundIndex);
+    // Calcula o índice baseado na largura fixa do slide (SLIDE_WIDTH)
+    const x = event.nativeEvent.contentOffset.x;
+    const index = Math.round(x / SLIDE_WIDTH);
+    
+    if (index !== activeIndex && index >= 0 && index < slides.length) {
+      setActiveIndex(index);
     }
   };
 
@@ -229,11 +231,15 @@ export default function ChartsCarousel({ transactions }: ChartsCarouselProps) {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
+        // CORREÇÃO DO SWIPE:
+        snapToInterval={SLIDE_WIDTH} // Pula exatamente a largura de um item
+        decelerationRate="fast"      // Para rapidamente no item
+        snapToAlignment="center"     // Centraliza o item
+        pagingEnabled={false}        // Desativa a paginação padrão que estava causando o erro
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        contentContainerStyle={{ alignItems: 'center' }}
+        contentContainerStyle={{ paddingHorizontal: 10 }} // Pequeno padding para centralizar melhor
       />
       
       <View style={styles.pagination}>
@@ -262,7 +268,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   slide: {
-    width: 130, 
+    width: SLIDE_WIDTH, // Usando a constante para garantir consistência
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8
