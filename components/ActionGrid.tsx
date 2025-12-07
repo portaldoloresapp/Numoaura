@@ -1,14 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { History, Box, TrendingUp, MoreHorizontal } from 'lucide-react-native';
 import { COLORS, SPACING } from '../constants/theme';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
+import AnimatedTouchable from './AnimatedTouchable';
 
-// Definindo as novas ações solicitadas com suas rotas
 const actions = [
   { id: 1, label: 'Histórico', icon: History, route: '/(tabs)/history' },
   { id: 2, label: 'Caixinhas', icon: Box, route: '/(tabs)/wallet' },
-  { id: 3, label: 'Avançado', icon: TrendingUp, route: '/(tabs)/statistics' }, // "Modo Avançado" abreviado para caber melhor
+  { id: 3, label: 'Avançado', icon: TrendingUp, route: '/(tabs)/statistics' },
   { id: 4, label: 'Menu', icon: MoreHorizontal, route: '/(tabs)/menu' },
 ];
 
@@ -17,20 +18,24 @@ export default function ActionGrid() {
 
   return (
     <View style={styles.container}>
-      {actions.map((action) => (
-        <TouchableOpacity 
-          key={action.id} 
-          style={styles.actionItem}
-          onPress={() => router.push(action.route as any)}
-          activeOpacity={0.7}
+      {actions.map((action, index) => (
+        <Animated.View
+            key={action.id}
+            entering={FadeInDown.delay(index * 100).springify()}
+            layout={Layout.springify()}
         >
-          <View style={styles.iconCircle}>
-            <action.icon size={24} color={COLORS.black} />
-          </View>
-          <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
-            {action.label}
-          </Text>
-        </TouchableOpacity>
+            <AnimatedTouchable 
+              style={styles.actionItem}
+              onPress={() => router.push(action.route as any)}
+            >
+              <View style={styles.iconCircle}>
+                <action.icon size={24} color={COLORS.black} />
+              </View>
+              <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
+                {action.label}
+              </Text>
+            </AnimatedTouchable>
+        </Animated.View>
       ))}
     </View>
   );
@@ -41,12 +46,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: SPACING.l,
-    paddingHorizontal: 4, // Pequeno ajuste para garantir alinhamento visual
+    paddingHorizontal: 4,
   },
   actionItem: {
     alignItems: 'center',
     gap: 8,
-    width: 70, // Largura fixa para garantir alinhamento centralizado do texto
+    width: 70,
   },
   iconCircle: {
     width: 56,
@@ -55,7 +60,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    // Sombras suaves
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

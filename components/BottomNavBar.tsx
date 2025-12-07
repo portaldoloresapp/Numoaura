@@ -1,17 +1,38 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { House, Box, History, Plus, MoreHorizontal } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useRouter } from 'expo-router';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+
+// Componente para animar o ícone individualmente
+const TabIcon = ({ isFocused, icon: Icon, name }: { isFocused: boolean; icon: any, name: string }) => {
+  
+  const animatedIconStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: withSpring(isFocused ? 1.1 : 1) }],
+      opacity: withTiming(isFocused ? 1 : 0.5),
+    };
+  });
+
+  return (
+    <View style={styles.iconWrapper}>
+      <Animated.View style={animatedIconStyle}>
+        <Icon 
+            size={26} 
+            color={isFocused ? COLORS.white : '#888'} 
+            strokeWidth={isFocused ? 2.5 : 2}
+        />
+      </Animated.View>
+    </View>
+  );
+};
 
 export default function BottomNavBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const router = useRouter();
 
-  // Lista explícita das rotas que devem aparecer na barra, na ordem correta
   const ALLOWED_ROUTES = ['index', 'wallet', 'add_placeholder', 'history', 'menu'];
-
-  // Filtra apenas as rotas permitidas e mantém a ordem definida no _layout ou array acima
   const visibleRoutes = state.routes.filter(route => ALLOWED_ROUTES.includes(route.name));
 
   return (
@@ -27,7 +48,6 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
             canPreventDefault: true,
           });
 
-          // Lógica especial para o botão central
           if (route.name === 'add_placeholder') {
              router.push('/add-transaction');
              return;
@@ -38,7 +58,6 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
           }
         };
 
-        // Mapeamento de Ícones
         let IconComponent = House;
         if (route.name === 'index') IconComponent = House;
         else if (route.name === 'wallet') IconComponent = Box;
@@ -46,7 +65,6 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
         else if (route.name === 'menu') IconComponent = MoreHorizontal;
         else if (route.name === 'add_placeholder') IconComponent = Plus;
 
-        // Renderização Especial para o Botão Central (Adicionar)
         if (route.name === 'add_placeholder') {
            return (
              <View key={route.key} style={styles.centerButtonContainer} pointerEvents="box-none">
@@ -61,7 +79,6 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
            );
         }
 
-        // Renderização dos Botões Normais
         return (
           <TouchableOpacity
             key={route.key}
@@ -73,13 +90,7 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
             style={styles.tabBarItem}
             activeOpacity={0.7}
           >
-            <View style={styles.iconContainer}>
-                <IconComponent 
-                    size={26} 
-                    color={isFocused ? COLORS.white : '#666'} 
-                    strokeWidth={isFocused ? 2.5 : 2}
-                />
-            </View>
+            <TabIcon isFocused={isFocused} icon={IconComponent} name={route.name} />
           </TouchableOpacity>
         );
       })}
@@ -93,8 +104,8 @@ const styles = StyleSheet.create({
     bottom: 30,
     left: 20,
     right: 20,
-    backgroundColor: '#121212', // Preto profundo
-    borderRadius: 40, // Pílula
+    backgroundColor: '#121212',
+    borderRadius: 40,
     height: 70,
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,14 +122,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  iconContainer: {
-    justifyContent: 'center',
+  iconWrapper: {
     alignItems: 'center',
-    width: 50,
+    justifyContent: 'center',
     height: 50,
+    width: 50,
   },
   centerButtonContainer: {
-    top: -25, // Eleva o botão para fora da barra
+    top: -25,
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
@@ -132,13 +143,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    // Sombras
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 6,
-    // Borda grossa da mesma cor da barra para criar o efeito de recorte
     borderWidth: 6,
     borderColor: '#121212', 
   },

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { COLORS, SPACING } from '../../constants/theme';
 import { Plus, Target } from 'lucide-react-native';
@@ -6,9 +6,31 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Goal } from '../../types';
-import Animated, { FadeInDown, Layout, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeInDown, Layout, FadeOut, useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import AnimatedTouchable from '../../components/AnimatedTouchable';
 import Skeleton from '../../components/Skeleton';
+
+// Componente separado para animar a barra de progresso individualmente
+const AnimatedProgressBar = ({ progress }: { progress: number }) => {
+    const width = useSharedValue(0);
+
+    useEffect(() => {
+        // Anima a largura de 0 até o valor real
+        width.value = withTiming(Math.min(progress * 100, 100), { duration: 1000 });
+    }, [progress]);
+
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            width: `${width.value}%`,
+        };
+    });
+
+    return (
+        <View style={styles.progressBg}>
+            <Animated.View style={[styles.progressFill, animatedStyle]} />
+        </View>
+    );
+};
 
 export default function WalletScreen() {
   const { user } = useAuth();
@@ -80,7 +102,7 @@ export default function WalletScreen() {
     
     return (
         <Animated.View 
-            entering={FadeInDown.delay(index * 50).springify()} 
+            entering={FadeInDown.delay(index * 100).springify()} 
             exiting={FadeOut}
             layout={Layout.springify()}
         >
@@ -89,7 +111,6 @@ export default function WalletScreen() {
                 onPress={() => router.push(`/goal/${item.id}`)}
             >
                 <View style={styles.left}>
-                    {/* Ícone padronizado com fundo preto igual ao Histórico */}
                     <View style={styles.iconBox}>
                         <Target size={20} color={COLORS.white} />
                     </View>
@@ -97,14 +118,8 @@ export default function WalletScreen() {
                     <View style={styles.textContainer}>
                         <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
                         
-                        {/* Barra de Progresso Compacta */}
                         <View style={styles.progressWrapper}>
-                            <View style={styles.progressBg}>
-                                <View style={[
-                                    styles.progressFill, 
-                                    { width: `${Math.min(progress * 100, 100)}%` }
-                                ]} />
-                            </View>
+                            <AnimatedProgressBar progress={progress} />
                             <Text style={styles.metaText}>
                                 Meta: {item.target_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </Text>
@@ -141,7 +156,7 @@ export default function WalletScreen() {
               <Skeleton width={150} height={40} style={{ marginTop: 4 }} />
           ) : (
               <Animated.Text 
-                entering={FadeInDown.duration(500)}
+                entering={FadeInDown.duration(600).springify()}
                 style={styles.summaryValue}
               >
                 {totalSaved.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -230,14 +245,13 @@ const styles = StyleSheet.create({
   summaryValue: {
       fontSize: 32,
       fontFamily: 'Inter_700Bold',
-      color: COLORS.primary, // Mantendo o verde vibrante para o total
+      color: COLORS.primary,
       marginTop: 4
   },
   listContent: {
       paddingHorizontal: SPACING.l,
       paddingBottom: 100
   },
-  // Estilo de Lista (Igual ao Histórico)
   itemContainer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -258,7 +272,7 @@ const styles = StyleSheet.create({
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: COLORS.dark, // Fundo preto consistente
+      backgroundColor: COLORS.dark,
       justifyContent: 'center',
       alignItems: 'center',
       flexShrink: 0,
@@ -281,7 +295,8 @@ const styles = StyleSheet.create({
       height: 4,
       backgroundColor: '#F0F0F0',
       borderRadius: 2,
-      width: 60
+      width: 60,
+      overflow: 'hidden'
   },
   progressFill: {
       height: '100%',
