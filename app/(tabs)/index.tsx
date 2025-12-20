@@ -53,38 +53,38 @@ export default function HomeScreen() {
 
   // --- Funções de Navegação de Data ---
   const handlePrevDay = () => {
-      setSelectedDate(prev => subDays(prev, 1));
+    setSelectedDate(prev => subDays(prev, 1));
   };
 
   const handleNextDay = () => {
-      setSelectedDate(prev => addDays(prev, 1));
+    setSelectedDate(prev => addDays(prev, 1));
   };
 
   const handleToday = () => {
-      setSelectedDate(new Date());
+    setSelectedDate(new Date());
   };
   // ------------------------------------
 
   const fetchData = async () => {
     if (!user) return;
-    
+
     try {
-        const { data, error } = await supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        if (data) {
-            setTransactions(data);
-        }
+      if (data) {
+        setTransactions(data);
+      }
 
     } catch (error: any) {
-        console.error('Error fetching data:', error.message);
+      console.error('Error fetching data:', error.message);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -97,63 +97,63 @@ export default function HomeScreen() {
   // CÁLCULO DINÂMICO DO SALDO DIÁRIO
   const dailyStats = useMemo(() => {
     return transactions.reduce(
-        (acc, transaction) => {
-            const transactionDate = parseISO(transaction.created_at);
-            
-            if (isSameDay(transactionDate, selectedDate)) {
-                if (transaction.type === 'income') {
-                    acc.income += transaction.amount;
-                } else {
-                    acc.expense += transaction.amount;
-                }
-            }
-            return acc;
-        },
-        { income: 0, expense: 0 }
+      (acc, transaction) => {
+        const transactionDate = parseISO(transaction.created_at);
+
+        if (isSameDay(transactionDate, selectedDate)) {
+          if (transaction.type === 'income') {
+            acc.income += transaction.amount;
+          } else {
+            acc.expense += transaction.amount;
+          }
+        }
+        return acc;
+      },
+      { income: 0, expense: 0 }
     );
   }, [transactions, selectedDate]);
 
   const dailyBalance = dailyStats.income - dailyStats.expense;
 
   const onRefresh = async () => {
-      setRefreshing(true);
-      await fetchData();
-      setRefreshing(false);
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
   };
 
   const handleDayPress = (day: any) => {
-      const date = new Date(day.timestamp); 
-      const correctedDate = addDays(date, 1); 
-      
-      setSelectedDate(correctedDate);
-      setShowCalendar(false);
+    const date = new Date(day.timestamp);
+    const correctedDate = addDays(date, 1);
+
+    setSelectedDate(correctedDate);
+    setShowCalendar(false);
   };
 
   return (
     <View style={styles.mainContainer}>
       <StatusBar style="dark" />
-      
+
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
-          style={styles.scrollView} 
+        <ScrollView
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 130 }}
           refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.black} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.black} />
           }
         >
           <View style={styles.contentContainer}>
-            
+
             {/* Header */}
             <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.header}>
               <View style={styles.leftHeader}>
-                <AnimatedTouchable 
-                  style={styles.iconBtn} 
+                <AnimatedTouchable
+                  style={styles.iconBtn}
                   onPress={() => router.push('/(tabs)/menu')}
                 >
                   <LayoutGrid size={24} color={COLORS.black} />
                 </AnimatedTouchable>
-                <AnimatedTouchable 
+                <AnimatedTouchable
                   style={styles.iconBtn}
                   onPress={() => router.push('/settings/home-config')}
                 >
@@ -162,87 +162,88 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.rightHeader}>
-                 <AnimatedTouchable 
-                    style={styles.profileContainer}
-                    onPress={() => router.push('/(tabs)/profile')}
-                 >
-                    <Image 
-                        source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
-                        style={styles.avatar} 
-                    />
-                 </AnimatedTouchable>
-                 <AnimatedTouchable 
-                    style={styles.plusBtn}
-                    onPress={() => router.push('/add-transaction')}
-                 >
-                    <Plus size={20} color={COLORS.white} />
-                 </AnimatedTouchable>
+                <AnimatedTouchable
+                  style={styles.profileContainer}
+                  onPress={() => router.push('/(tabs)/profile')}
+                >
+                  <Image
+                    source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }}
+                    style={styles.avatar}
+                  />
+                </AnimatedTouchable>
+                <AnimatedTouchable
+                  style={styles.plusBtn}
+                  onPress={() => router.push('/add-transaction')}
+                >
+                  <Plus size={20} color={COLORS.white} />
+                </AnimatedTouchable>
               </View>
             </Animated.View>
 
             {/* Sub Header Info */}
             <Animated.View entering={FadeInDown.delay(100).duration(600).springify()} style={styles.subHeader}>
-                <AnimatedTouchable 
-                    style={styles.dateDisplay}
-                    onPress={() => setShowCalendar(true)}
-                >
-                    <CalendarDays size={18} color={COLORS.black} />
-                    <Text style={styles.dateText}>{formattedDate}</Text>
-                    <ChevronDown size={14} color={COLORS.textSecondary} style={{ marginLeft: -4 }} />
-                </AnimatedTouchable>
-                <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
+              <AnimatedTouchable
+                style={styles.dateDisplay}
+                onPress={() => setShowCalendar(true)}
+              >
+                <CalendarDays size={18} color={COLORS.black} />
+                <Text style={styles.dateText}>{formattedDate}</Text>
+                <ChevronDown size={14} color={COLORS.textSecondary} style={{ marginLeft: -4 }} />
+              </AnimatedTouchable>
+              <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
             </Animated.View>
 
             {/* Main Summary Card */}
             {loading ? (
               <View style={{ marginTop: SPACING.s }}>
-                 <Skeleton height={200} borderRadius={32} />
+                <Skeleton height={200} borderRadius={32} />
               </View>
             ) : (
               visibleWidgets.summary && (
-                  <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
-                    <SummaryCard 
-                        balance={dailyBalance} 
-                        income={dailyStats.income} 
-                        expense={dailyStats.expense}
-                        label={dateLabel}
-                        onPrevDay={handlePrevDay}
-                        onNextDay={handleNextDay}
-                        onToday={handleToday}
-                    />
-                  </Animated.View>
+                <Animated.View entering={FadeInDown.delay(200).duration(600).springify()}>
+                  <SummaryCard
+                    balance={dailyBalance}
+                    income={dailyStats.income}
+                    expense={dailyStats.expense}
+                    label={dateLabel}
+                    onPrevDay={handlePrevDay}
+                    onNextDay={handleNextDay}
+                    onToday={handleToday}
+                    onActionPress={() => router.push('/(tabs)/history')}
+                  />
+                </Animated.View>
               )
             )}
-            
+
             {/* Action Grid */}
             {visibleWidgets.actions && (
-                <Animated.View 
-                  entering={FadeInDown.delay(300).duration(600).springify()}
-                  style={{ marginTop: SPACING.l }}
-                >
-                    <ActionGrid />
-                </Animated.View>
+              <Animated.View
+                entering={FadeInDown.delay(300).duration(600).springify()}
+                style={{ marginTop: SPACING.l }}
+              >
+                <ActionGrid />
+              </Animated.View>
             )}
 
           </View>
 
           {/* Recent Activity Section */}
           {visibleWidgets.recent_activity && (
-              <Animated.View 
-                entering={FadeInUp.delay(400).duration(600).springify()}
-                style={{ paddingHorizontal: SPACING.l }}
-              >
-                {loading ? (
-                  <View style={{ gap: 16, marginTop: 16 }}>
-                    <Skeleton height={60} borderRadius={16} />
-                    <Skeleton height={60} borderRadius={16} />
-                    <Skeleton height={60} borderRadius={16} />
-                  </View>
-                ) : (
-                  // LIMITADO A 6 ITENS
-                  <RecentActivity transactions={transactions.slice(0, 6)} />
-                )}
-              </Animated.View>
+            <Animated.View
+              entering={FadeInUp.delay(400).duration(600).springify()}
+              style={{ paddingHorizontal: SPACING.l }}
+            >
+              {loading ? (
+                <View style={{ gap: 16, marginTop: 16 }}>
+                  <Skeleton height={60} borderRadius={16} />
+                  <Skeleton height={60} borderRadius={16} />
+                  <Skeleton height={60} borderRadius={16} />
+                </View>
+              ) : (
+                // LIMITADO A 6 ITENS
+                <RecentActivity transactions={transactions.slice(0, 6)} />
+              )}
+            </Animated.View>
           )}
 
         </ScrollView>
@@ -255,40 +256,40 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setShowCalendar(false)}
       >
-          <View style={styles.modalOverlay}>
-              <TouchableOpacity 
-                style={styles.modalBackdrop} 
-                activeOpacity={1} 
-                onPress={() => setShowCalendar(false)}
-              />
-              <View style={styles.calendarContainer}>
-                  <Calendar
-                    current={format(selectedDate, 'yyyy-MM-dd')}
-                    onDayPress={handleDayPress}
-                    theme={{
-                        backgroundColor: COLORS.white,
-                        calendarBackground: COLORS.white,
-                        textSectionTitleColor: COLORS.textSecondary,
-                        selectedDayBackgroundColor: COLORS.primary,
-                        selectedDayTextColor: COLORS.black,
-                        todayTextColor: COLORS.primary,
-                        dayTextColor: COLORS.text,
-                        textDisabledColor: '#d9e1e8',
-                        dotColor: COLORS.primary,
-                        selectedDotColor: COLORS.black,
-                        arrowColor: COLORS.black,
-                        monthTextColor: COLORS.black,
-                        indicatorColor: COLORS.black,
-                        textDayFontFamily: 'Inter_400Regular',
-                        textMonthFontFamily: 'Inter_700Bold',
-                        textDayHeaderFontFamily: 'Inter_600SemiBold',
-                    }}
-                    markedDates={{
-                        [format(selectedDate, 'yyyy-MM-dd')]: { selected: true, disableTouchEvent: true }
-                    }}
-                  />
-              </View>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowCalendar(false)}
+          />
+          <View style={styles.calendarContainer}>
+            <Calendar
+              current={format(selectedDate, 'yyyy-MM-dd')}
+              onDayPress={handleDayPress}
+              theme={{
+                backgroundColor: COLORS.white,
+                calendarBackground: COLORS.white,
+                textSectionTitleColor: COLORS.textSecondary,
+                selectedDayBackgroundColor: COLORS.primary,
+                selectedDayTextColor: COLORS.black,
+                todayTextColor: COLORS.primary,
+                dayTextColor: COLORS.text,
+                textDisabledColor: '#d9e1e8',
+                dotColor: COLORS.primary,
+                selectedDotColor: COLORS.black,
+                arrowColor: COLORS.black,
+                monthTextColor: COLORS.black,
+                indicatorColor: COLORS.black,
+                textDayFontFamily: 'Inter_400Regular',
+                textMonthFontFamily: 'Inter_700Bold',
+                textDayHeaderFontFamily: 'Inter_600SemiBold',
+              }}
+              markedDates={{
+                [format(selectedDate, 'yyyy-MM-dd')]: { selected: true, disableTouchEvent: true }
+              }}
+            />
           </View>
+        </View>
       </Modal>
 
     </View>
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   profileContainer: {
-      position: 'relative'
+    position: 'relative'
   },
   avatar: {
     width: 36,
@@ -355,64 +356,64 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary
   },
   plusBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 2
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 2
   },
   subHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: SPACING.s
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.s
   },
   dateDisplay: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      backgroundColor: COLORS.white,
-      borderRadius: 24,
-      borderWidth: 1,
-      borderColor: '#F0F0F0',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   dateText: {
-      fontFamily: 'Inter_600SemiBold',
-      fontSize: 14,
-      color: COLORS.black,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: COLORS.black,
   },
   welcomeText: {
-      fontFamily: 'Inter_400Regular',
-      fontSize: 14,
-      color: COLORS.black,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: COLORS.black,
   },
   // Modal Styles
   modalOverlay: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFillObject,
   },
   calendarContainer: {
-      width: '90%',
-      backgroundColor: COLORS.white,
-      borderRadius: 24,
-      padding: SPACING.m,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: 0.25,
-      shadowRadius: 20,
-      elevation: 10,
+    width: '90%',
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: SPACING.m,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   }
 });

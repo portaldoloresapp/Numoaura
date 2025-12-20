@@ -24,7 +24,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -34,102 +34,105 @@ export default function LoginScreen() {
       if (error) {
         setLoading(false);
         if (error.message.includes('Email not confirmed')) {
-            Alert.alert(
-                'Email não confirmado', 
-                'Verifique sua caixa de entrada (e spam) e clique no link de confirmação antes de entrar.'
-            );
+          Alert.alert(
+            'Email não confirmado',
+            'Verifique sua caixa de entrada (e spam) e clique no link de confirmação antes de entrar.'
+          );
         } else if (error.message.includes('Invalid login credentials')) {
-            Alert.alert('Acesso Negado', 'Email ou senha incorretos.');
+          Alert.alert('Acesso Negado', 'Email ou senha incorretos.');
         } else {
-            Alert.alert('Erro ao entrar', error.message);
+          Alert.alert('Erro ao entrar', error.message);
         }
       } else {
+        // O AuthContext irá detectar a mudança de sessão automaticamente
         if (data.session) {
-            router.replace('/(tabs)');
+          router.replace('/(tabs)');
+        } else {
+          setLoading(false);
         }
       }
     } catch (e: any) {
-        setLoading(false);
-        Alert.alert('Erro', e.message);
+      setLoading(false);
+      Alert.alert('Erro', e.message);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
-            
-            {/* App Logo Section */}
-            <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.logoContainer}>
-                <View style={styles.logoBox}>
-                    <Command size={40} color={COLORS.black} />
-                </View>
-                <Text style={styles.appName}>Numoaura</Text>
-            </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(100).duration(800).springify()} style={styles.header}>
-                <Text style={styles.title}>Bem-vindo de volta</Text>
-                <Text style={styles.subtitle}>Entre para gerenciar suas finanças</Text>
-            </Animated.View>
+          {/* App Logo Section */}
+          <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.logoContainer}>
+            <View style={styles.logoBox}>
+              <Command size={40} color={COLORS.black} />
+            </View>
+            <Text style={styles.appName}>Numoaura</Text>
+          </Animated.View>
 
-            <View style={styles.form}>
+          <Animated.View entering={FadeInDown.delay(100).duration(800).springify()} style={styles.header}>
+            <Text style={styles.title}>Bem-vindo de volta</Text>
+            <Text style={styles.subtitle}>Entre para gerenciar suas finanças</Text>
+          </Animated.View>
+
+          <View style={styles.form}>
             <Animated.View entering={FadeInDown.delay(200).duration(800).springify()} style={styles.inputContainer}>
-                <Mail size={20} color={COLORS.textSecondary} />
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    returnKeyType="next"
-                    onSubmitEditing={() => passwordRef.current?.focus()}
-                    blurOnSubmit={false}
-                />
+              <Mail size={20} color={COLORS.textSecondary} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor={COLORS.textSecondary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
+              />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(300).duration(800).springify()} style={styles.inputContainer}>
-                <Lock size={20} color={COLORS.textSecondary} />
-                <TextInput
-                    ref={passwordRef}
-                    style={styles.input}
-                    placeholder="Senha"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    returnKeyType="go"
-                    onSubmitEditing={handleLogin}
-                />
+              <Lock size={20} color={COLORS.textSecondary} />
+              <TextInput
+                ref={passwordRef}
+                style={styles.input}
+                placeholder="Senha"
+                placeholderTextColor={COLORS.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+              />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>
-                <AnimatedTouchable style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
-                    {loading ? (
-                    <ActivityIndicator color={COLORS.black} />
-                    ) : (
-                    <View style={styles.btnContent}>
-                        <Text style={styles.loginBtnText}>Entrar</Text>
-                        <ArrowRight size={20} color={COLORS.black} />
-                    </View>
-                    )}
-                </AnimatedTouchable>
+              <AnimatedTouchable style={styles.loginBtn} onPress={handleLogin} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color={COLORS.black} />
+                ) : (
+                  <View style={styles.btnContent}>
+                    <Text style={styles.loginBtnText}>Entrar</Text>
+                    <ArrowRight size={20} color={COLORS.black} />
+                  </View>
+                )}
+              </AnimatedTouchable>
             </Animated.View>
 
             <Animated.View entering={FadeInUp.delay(500).duration(800).springify()} style={styles.footer}>
-                <Text style={styles.footerText}>Não tem uma conta? </Text>
-                <Link href="/auth/signup" asChild>
+              <Text style={styles.footerText}>Não tem uma conta? </Text>
+              <Link href="/auth/signup" asChild>
                 <TouchableOpacity>
-                    <Text style={styles.linkText}>Cadastre-se</Text>
+                  <Text style={styles.linkText}>Cadastre-se</Text>
                 </TouchableOpacity>
-                </Link>
+              </Link>
             </Animated.View>
-            </View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -149,24 +152,24 @@ const styles = StyleSheet.create({
     padding: SPACING.l,
   },
   logoContainer: {
-      alignItems: 'center',
-      marginBottom: SPACING.xl
+    alignItems: 'center',
+    marginBottom: SPACING.xl
   },
   logoBox: {
-      width: 80,
-      height: 80,
-      backgroundColor: COLORS.primary,
-      borderRadius: 24,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: SPACING.m,
-      transform: [{ rotate: '-10deg' }]
+    width: 80,
+    height: 80,
+    backgroundColor: COLORS.primary,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    transform: [{ rotate: '-10deg' }]
   },
   appName: {
-      fontSize: 24,
-      fontFamily: 'Inter_700Bold',
-      color: COLORS.white,
-      letterSpacing: 1
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    color: COLORS.white,
+    letterSpacing: 1
   },
   header: {
     marginBottom: SPACING.xl,

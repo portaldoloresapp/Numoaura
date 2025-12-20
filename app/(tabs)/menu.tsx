@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING } from '../../constants/theme';
-import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, Shield, HelpCircle } from 'lucide-react-native';
+import { User, TrendingUp, SlidersHorizontal, LogOut, ChevronRight, CreditCard, Shield, HelpCircle, MessageCircle } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import LogoutModal from '../../components/LogoutModal';
 import Animated, { FadeInDown, Layout } from 'react-native-reanimated';
@@ -26,21 +26,22 @@ export default function MenuScreen() {
   };
 
   const menuItems = [
-    { 
+    {
       section: 'Geral',
       items: [
         { id: 'profile', label: 'Perfil', icon: User, route: '/(tabs)/profile' },
         { id: 'stats', label: 'Modo Avançado', icon: TrendingUp, route: '/(tabs)/statistics' },
+        { id: 'chatbot', label: 'Chat AI', icon: MessageCircle, route: '/(tabs)/chatbot' },
       ]
     },
     {
       section: 'Configurações',
       items: [
-        { 
-            id: 'home-config', 
-            label: 'Configurar Início', 
-            icon: SlidersHorizontal,
-            route: '/settings/home-config' 
+        {
+          id: 'home-config',
+          label: 'Configurar Início',
+          icon: SlidersHorizontal,
+          route: '/settings/home-config'
         },
         { id: 'cards', label: 'Meus Cartões', icon: CreditCard, action: () => Alert.alert('Em breve', 'Gerenciamento de cartões') },
         { id: 'security', label: 'Segurança', icon: Shield, action: () => Alert.alert('Em breve', 'Configurações de segurança') },
@@ -52,26 +53,26 @@ export default function MenuScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         {/* Header Simplificado */}
-        <Animated.View 
-            entering={FadeInDown.duration(600).springify()} 
-            style={styles.header}
+        <Animated.View
+          entering={FadeInDown.duration(600).springify()}
+          style={styles.header}
         >
-            <Image 
-                source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }} 
-                style={styles.avatar} 
-            />
-            <View>
-                <Text style={styles.name}>{user?.user_metadata?.full_name || 'Usuário'}</Text>
-                <Text style={styles.email}>{user?.email}</Text>
-            </View>
+          <Image
+            source={{ uri: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150?u=default' }}
+            style={styles.avatar}
+          />
+          <View>
+            <Text style={styles.name}>{user?.user_metadata?.full_name || 'Usuário'}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
+          </View>
         </Animated.View>
 
         {/* Menu Sections */}
         {menuItems.map((section, index) => (
-          <Animated.View 
-            key={index} 
+          <Animated.View
+            key={index}
             style={styles.section}
             entering={FadeInDown.delay((index + 1) * 150).duration(600).springify()}
             layout={Layout.springify()}
@@ -79,10 +80,10 @@ export default function MenuScreen() {
             <Text style={styles.sectionTitle}>{section.section}</Text>
             <View style={styles.sectionContent}>
               {section.items.map((item: any, idx) => (
-                <AnimatedTouchable 
-                  key={item.id} 
+                <AnimatedTouchable
+                  key={item.id}
                   style={[
-                    styles.menuItem, 
+                    styles.menuItem,
                     idx === section.items.length - 1 && styles.lastMenuItem
                   ]}
                   onPress={() => {
@@ -107,29 +108,29 @@ export default function MenuScreen() {
         ))}
 
         {/* Logout Button */}
-        <Animated.View 
-            entering={FadeInDown.delay(500).duration(600).springify()}
+        <Animated.View
+          entering={FadeInDown.delay(500).duration(600).springify()}
         >
-            <AnimatedTouchable 
-                style={styles.logoutBtn} 
-                onPress={handleLogoutPress}
-            >
-                <LogOut size={20} color={COLORS.danger} />
-                <Text style={styles.logoutText}>Sair da Conta</Text>
-            </AnimatedTouchable>
+          <AnimatedTouchable
+            style={styles.logoutBtn}
+            onPress={handleLogoutPress}
+          >
+            <LogOut size={20} color={COLORS.danger} />
+            <Text style={styles.logoutText}>Sair da Conta</Text>
+          </AnimatedTouchable>
         </Animated.View>
 
-        <Animated.Text 
-            entering={FadeInDown.delay(600).duration(600)}
-            style={styles.version}
+        <Animated.Text
+          entering={FadeInDown.delay(600).duration(600)}
+          style={styles.version}
         >
-            Versão 1.2.1
+          Versão 1.2.1
         </Animated.Text>
 
       </ScrollView>
 
       {/* Modal de Logout */}
-      <LogoutModal 
+      <LogoutModal
         visible={logoutVisible}
         onClose={() => setLogoutVisible(false)}
         onConfirm={confirmLogout}

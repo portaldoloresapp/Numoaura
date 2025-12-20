@@ -31,8 +31,8 @@ export default function AddTransactionScreen() {
   };
 
   const handleSave = async () => {
-    if (!amount || !selectedCategory || !user) {
-      Alert.alert('Atenção', 'Preencha o valor e selecione uma categoria.');
+    if (!amount || !user) {
+      Alert.alert('Atenção', 'Preencha o valor.');
       return;
     }
 
@@ -41,9 +41,9 @@ export default function AddTransactionScreen() {
     try {
       // Converter valor para número (substituindo vírgula por ponto)
       const numericAmount = parseFloat(amount.replace(',', '.'));
-      
+
       if (isNaN(numericAmount)) {
-          throw new Error('Valor inválido');
+        throw new Error('Valor inválido');
       }
 
       const categorySlug = categories.find(c => c.id === selectedCategory)?.slug || 'outros';
@@ -53,7 +53,7 @@ export default function AddTransactionScreen() {
         amount: numericAmount,
         type: type,
         category: categorySlug,
-        description: categories.find(c => c.id === selectedCategory)?.name,
+        description: categories.find(c => c.id === selectedCategory)?.name || 'Outros',
       });
 
       if (error) throw error;
@@ -70,7 +70,7 @@ export default function AddTransactionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
-        
+
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Nova Transação</Text>
@@ -81,16 +81,16 @@ export default function AddTransactionScreen() {
 
         {/* Type Selector */}
         <View style={styles.typeSelector}>
-          <TouchableOpacity 
-            style={[styles.typeBtn, type === 'expense' && styles.activeExpense]} 
+          <TouchableOpacity
+            style={[styles.typeBtn, type === 'expense' && styles.activeExpense]}
             onPress={() => setType('expense')}
           >
             <ArrowDownCircle size={20} color={type === 'expense' ? COLORS.white : COLORS.textSecondary} />
             <Text style={[styles.typeText, type === 'expense' && styles.activeTypeText]}>Gasto</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.typeBtn, type === 'income' && styles.activeIncome]} 
+
+          <TouchableOpacity
+            style={[styles.typeBtn, type === 'income' && styles.activeIncome]}
             onPress={() => setType('income')}
           >
             <ArrowUpCircle size={20} color={type === 'income' ? COLORS.black : COLORS.textSecondary} />
@@ -118,10 +118,10 @@ export default function AddTransactionScreen() {
         <Text style={styles.sectionTitle}>Categoria</Text>
         <View style={styles.categoriesGrid}>
           {categories.map((cat) => (
-            <TouchableOpacity 
-              key={cat.id} 
+            <TouchableOpacity
+              key={cat.id}
               style={[
-                styles.categoryItem, 
+                styles.categoryItem,
                 selectedCategory === cat.id && { backgroundColor: COLORS.black }
               ]}
               onPress={() => setSelectedCategory(cat.id)}
@@ -142,8 +142,8 @@ export default function AddTransactionScreen() {
 
         {/* Save Button */}
         <View style={styles.footer}>
-          <TouchableOpacity 
-            style={[styles.saveBtn, loading && { opacity: 0.7 }]} 
+          <TouchableOpacity
+            style={[styles.saveBtn, loading && { opacity: 0.7 }]}
             onPress={handleSave}
             disabled={loading}
           >

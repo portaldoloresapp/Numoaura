@@ -12,7 +12,7 @@ export default function TabLayout() {
       }}
     >
       {/* 1. Home (Início) */}
-       <Tabs.Screen
+      <Tabs.Screen
         name="index"
         options={{ title: 'Início' }}
       />
@@ -42,6 +42,7 @@ export default function TabLayout() {
       />
 
       {/* -- ROTAS OCULTAS DA BARRA -- */}
+      <Tabs.Screen name="chatbot" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="statistics" options={{ href: null }} />
 

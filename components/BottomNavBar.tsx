@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { House, Box, History, Plus, MoreHorizontal } from 'lucide-react-native';
+import { House, Box, History, Plus, MoreHorizontal, MessageCircle } from 'lucide-react-native';
 import { COLORS } from '../constants/theme';
 import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 // Componente para animar o ícone individualmente
 const TabIcon = ({ isFocused, icon: Icon, name }: { isFocused: boolean; icon: any, name: string }) => {
-  
+
   const animatedIconStyle = useAnimatedStyle(() => {
     return {
       transform: [{ scale: withSpring(isFocused ? 1.1 : 1) }],
@@ -19,10 +19,10 @@ const TabIcon = ({ isFocused, icon: Icon, name }: { isFocused: boolean; icon: an
   return (
     <View style={styles.iconWrapper}>
       <Animated.View style={animatedIconStyle}>
-        <Icon 
-            size={26} 
-            color={isFocused ? COLORS.white : '#888'} 
-            strokeWidth={isFocused ? 2.5 : 2}
+        <Icon
+          size={26}
+          color={isFocused ? COLORS.white : '#888'}
+          strokeWidth={isFocused ? 2.5 : 2}
         />
       </Animated.View>
     </View>
@@ -49,8 +49,8 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
           });
 
           if (route.name === 'add_placeholder') {
-             router.push('/add-transaction');
-             return;
+            router.push('/add-transaction');
+            return;
           }
 
           if (!isFocused && !event.defaultPrevented) {
@@ -63,20 +63,21 @@ export default function BottomNavBar({ state, descriptors, navigation }: BottomT
         else if (route.name === 'wallet') IconComponent = Box;
         else if (route.name === 'history') IconComponent = History;
         else if (route.name === 'menu') IconComponent = MoreHorizontal;
+        else if (route.name === 'chatbot') IconComponent = MessageCircle;
         else if (route.name === 'add_placeholder') IconComponent = Plus;
 
         if (route.name === 'add_placeholder') {
-           return (
-             <View key={route.key} style={styles.centerButtonContainer} pointerEvents="box-none">
-                <TouchableOpacity
-                  style={styles.centerButton}
-                  onPress={onPress}
-                  activeOpacity={0.9}
-                >
-                  <Plus size={32} color={COLORS.black} strokeWidth={3} />
-                </TouchableOpacity>
+          return (
+            <View key={route.key} style={styles.centerButtonContainer} pointerEvents="box-none">
+              <TouchableOpacity
+                style={styles.centerButton}
+                onPress={onPress}
+                activeOpacity={0.9}
+              >
+                <Plus size={32} color={COLORS.black} strokeWidth={3} />
+              </TouchableOpacity>
             </View>
-           );
+          );
         }
 
         return (
@@ -149,6 +150,6 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 6,
     borderWidth: 6,
-    borderColor: '#121212', 
+    borderColor: '#121212',
   },
 });
