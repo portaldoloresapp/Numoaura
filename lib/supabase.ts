@@ -6,7 +6,14 @@ import { AppState } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+console.log('Supabase URL:', supabaseUrl ? 'Defined' : 'UNDEFINED');
+console.log('Supabase Key:', supabaseAnonKey ? 'Defined' : 'UNDEFINED');
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('ERRO: Variáveis de ambiente do Supabase não encontradas!');
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
