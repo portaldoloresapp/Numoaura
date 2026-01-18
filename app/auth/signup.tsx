@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { Mail, Lock, User, ArrowLeft, Building2, Briefcase, Command, Link as LinkIcon, Check, X, Image as ImageIcon } from 'lucide-react-native';
+import { Mail, Lock, User, ArrowLeft, Building2, Briefcase, Command, Link as LinkIcon, Check, X, Image as ImageIcon, Eye, EyeOff } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
 type AccountType = 'personal' | 'business';
@@ -14,11 +14,11 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   // Refs para navegação entre inputs
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
-  
+
   // Estados para o Logo/Avatar via Link
   const [logoUrl, setLogoUrl] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -26,22 +26,23 @@ export default function SignUpScreen() {
   const [imageError, setImageError] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleApplyUrl = () => {
     const trimmedUrl = tempUrl.trim();
-    
+
     // Fecha o teclado para melhor UX
     Keyboard.dismiss();
 
     if (!trimmedUrl) {
-        setShowUrlInput(false);
-        return;
+      setShowUrlInput(false);
+      return;
     }
 
     // Validação simples de URL
     if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
-        Alert.alert('URL Inválida', 'O link da imagem deve começar com http:// ou https://');
-        return;
+      Alert.alert('URL Inválida', 'O link da imagem deve começar com http:// ou https://');
+      return;
     }
 
     setLogoUrl(trimmedUrl);
@@ -51,11 +52,11 @@ export default function SignUpScreen() {
   };
 
   const handleToggleUrlInput = () => {
-      if (!showUrlInput) {
-          // Se estiver abrindo, limpa o tempUrl ou poderia preencher com o atual
-          setTempUrl('');
-      }
-      setShowUrlInput(!showUrlInput);
+    if (!showUrlInput) {
+      // Se estiver abrindo, limpa o tempUrl ou poderia preencher com o atual
+      setTempUrl('');
+    }
+    setShowUrlInput(!showUrlInput);
   };
 
   const handleSignUp = async () => {
@@ -65,7 +66,7 @@ export default function SignUpScreen() {
     }
 
     setLoading(true);
-    
+
     try {
       const initialMetadata: any = {
         full_name: name,
@@ -108,20 +109,20 @@ export default function SignUpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
-          
+
           <View style={styles.topNav}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <ArrowLeft size={24} color={COLORS.white} />
+              <ArrowLeft size={24} color={COLORS.white} />
             </TouchableOpacity>
             <View style={styles.appLogoSmall}>
-                <Command size={20} color={COLORS.black} />
+              <Command size={20} color={COLORS.black} />
             </View>
           </View>
 
@@ -131,93 +132,93 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.typeSelector}>
-            <TouchableOpacity 
-                style={[styles.typeBtn, accountType === 'personal' && styles.activeTypeBtn]}
-                onPress={() => setAccountType('personal')}
+            <TouchableOpacity
+              style={[styles.typeBtn, accountType === 'personal' && styles.activeTypeBtn]}
+              onPress={() => setAccountType('personal')}
             >
-                <User size={20} color={accountType === 'personal' ? COLORS.black : COLORS.textSecondary} />
-                <Text style={[styles.typeText, accountType === 'personal' && styles.activeTypeText]}>Pessoal</Text>
+              <User size={20} color={accountType === 'personal' ? COLORS.black : COLORS.textSecondary} />
+              <Text style={[styles.typeText, accountType === 'personal' && styles.activeTypeText]}>Pessoal</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-                style={[styles.typeBtn, accountType === 'business' && styles.activeTypeBtn]}
-                onPress={() => setAccountType('business')}
+
+            <TouchableOpacity
+              style={[styles.typeBtn, accountType === 'business' && styles.activeTypeBtn]}
+              onPress={() => setAccountType('business')}
             >
-                <Briefcase size={20} color={accountType === 'business' ? COLORS.black : COLORS.textSecondary} />
-                <Text style={[styles.typeText, accountType === 'business' && styles.activeTypeText]}>Empresa</Text>
+              <Briefcase size={20} color={accountType === 'business' ? COLORS.black : COLORS.textSecondary} />
+              <Text style={[styles.typeText, accountType === 'business' && styles.activeTypeText]}>Empresa</Text>
             </TouchableOpacity>
           </View>
 
           {/* Seção de Logo para Empresa */}
           {accountType === 'business' && (
             <View style={styles.avatarSection}>
-                <View style={styles.avatarContainer}>
-                    {logoUrl && !imageError ? (
-                        <Image 
-                            source={{ uri: logoUrl }} 
-                            style={styles.avatarImage}
-                            onError={() => setImageError(true)}
-                        />
-                    ) : (
-                        <View style={styles.defaultAvatar}>
-                            <Command size={40} color={COLORS.black} />
-                        </View>
-                    )}
-                    
-                    {/* Botão de Link */}
-                    <View style={styles.imageActions}>
-                        <TouchableOpacity 
-                            style={styles.actionBtnCircle} 
-                            onPress={handleToggleUrlInput}
-                        >
-                            <LinkIcon size={18} color={COLORS.white} />
-                        </TouchableOpacity>
-                    </View>
-                </View>
+              <View style={styles.avatarContainer}>
+                {logoUrl && !imageError ? (
+                  <Image
+                    source={{ uri: logoUrl }}
+                    style={styles.avatarImage}
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <View style={styles.defaultAvatar}>
+                    <Command size={40} color={COLORS.black} />
+                  </View>
+                )}
 
-                {/* Input de URL Condicional */}
-                {showUrlInput && (
-                    <View style={styles.urlInputContainer}>
-                        <View style={styles.urlInputWrapper}>
-                            <ImageIcon size={16} color={COLORS.textSecondary} style={{ marginLeft: 8 }} />
-                            <TextInput 
-                                style={styles.urlInput}
-                                placeholder="Cole o link da imagem (https://...)"
-                                placeholderTextColor={COLORS.textSecondary}
-                                value={tempUrl}
-                                onChangeText={setTempUrl}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                keyboardType="url"
-                                autoFocus
-                                returnKeyType="done"
-                                onSubmitEditing={handleApplyUrl}
-                            />
-                        </View>
-                        <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
-                            <Check size={18} color={COLORS.white} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.cancelUrlBtn} onPress={() => setShowUrlInput(false)}>
-                            <X size={18} color={COLORS.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-                )}
-                
-                {!showUrlInput && (
-                    <Text style={styles.avatarHint}>
-                        {logoUrl ? 'Logo definido via link' : 'Defina o logo da sua empresa (Opcional)'}
-                    </Text>
-                )}
+                {/* Botão de Link */}
+                <View style={styles.imageActions}>
+                  <TouchableOpacity
+                    style={styles.actionBtnCircle}
+                    onPress={handleToggleUrlInput}
+                  >
+                    <LinkIcon size={18} color={COLORS.white} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Input de URL Condicional */}
+              {showUrlInput && (
+                <View style={styles.urlInputContainer}>
+                  <View style={styles.urlInputWrapper}>
+                    <ImageIcon size={16} color={COLORS.textSecondary} style={{ marginLeft: 8 }} />
+                    <TextInput
+                      style={styles.urlInput}
+                      placeholder="Cole o link da imagem (https://...)"
+                      placeholderTextColor={COLORS.textSecondary}
+                      value={tempUrl}
+                      onChangeText={setTempUrl}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="url"
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={handleApplyUrl}
+                    />
+                  </View>
+                  <TouchableOpacity style={styles.applyUrlBtn} onPress={handleApplyUrl}>
+                    <Check size={18} color={COLORS.white} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cancelUrlBtn} onPress={() => setShowUrlInput(false)}>
+                    <X size={18} color={COLORS.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {!showUrlInput && (
+                <Text style={styles.avatarHint}>
+                  {logoUrl ? 'Logo definido via link' : 'Defina o logo da sua empresa (Opcional)'}
+                </Text>
+              )}
             </View>
           )}
 
           <View style={styles.form}>
-            
+
             <View style={styles.inputContainer}>
               {accountType === 'personal' ? (
-                  <User size={20} color={COLORS.textSecondary} />
+                <User size={20} color={COLORS.textSecondary} />
               ) : (
-                  <Building2 size={20} color={COLORS.textSecondary} />
+                <Building2 size={20} color={COLORS.textSecondary} />
               )}
               <TextInput
                 style={styles.input}
@@ -257,10 +258,17 @@ export default function SignUpScreen() {
                 placeholderTextColor={COLORS.textSecondary}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 returnKeyType="done"
                 onSubmitEditing={handleSignUp}
               />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? (
+                  <EyeOff size={20} color={COLORS.textSecondary} />
+                ) : (
+                  <Eye size={20} color={COLORS.textSecondary} />
+                )}
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.signupBtn} onPress={handleSignUp} disabled={loading}>
@@ -268,7 +276,7 @@ export default function SignUpScreen() {
                 <ActivityIndicator color={COLORS.black} />
               ) : (
                 <Text style={styles.signupBtnText}>
-                    {accountType === 'personal' ? 'Criar Conta Pessoal' : 'Criar Conta Empresarial'}
+                  {accountType === 'personal' ? 'Criar Conta Pessoal' : 'Criar Conta Empresarial'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -293,10 +301,10 @@ const styles = StyleSheet.create({
     paddingTop: 60
   },
   topNav: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: SPACING.l
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.l
   },
   backBtn: {
     width: 40,
@@ -304,12 +312,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   appLogoSmall: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: COLORS.primary,
-      justifyContent: 'center',
-      alignItems: 'center'
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   header: {
     marginBottom: SPACING.l,
@@ -326,118 +334,118 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   typeSelector: {
-      flexDirection: 'row',
-      backgroundColor: '#1E1E1E',
-      borderRadius: BORDER_RADIUS.l,
-      padding: 4,
-      marginBottom: SPACING.xl,
-      borderWidth: 1,
-      borderColor: '#333'
+    flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: BORDER_RADIUS.l,
+    padding: 4,
+    marginBottom: SPACING.xl,
+    borderWidth: 1,
+    borderColor: '#333'
   },
   typeBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      borderRadius: BORDER_RADIUS.m,
-      gap: 8
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.m,
+    gap: 8
   },
   activeTypeBtn: {
-      backgroundColor: COLORS.primary
+    backgroundColor: COLORS.primary
   },
   typeText: {
-      fontSize: 14,
-      fontFamily: 'Inter_600SemiBold',
-      color: COLORS.textSecondary
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    color: COLORS.textSecondary
   },
   activeTypeText: {
-      color: COLORS.black
+    color: COLORS.black
   },
   // Avatar Styles
   avatarSection: {
-      alignItems: 'center',
-      marginBottom: SPACING.l
+    alignItems: 'center',
+    marginBottom: SPACING.l
   },
   avatarContainer: {
-      position: 'relative',
-      marginBottom: SPACING.s
+    position: 'relative',
+    marginBottom: SPACING.s
   },
   defaultAvatar: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: COLORS.primary, // Fundo verde limão (Logo Numoaura)
-      justifyContent: 'center',
-      alignItems: 'center',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primary, // Fundo verde limão (Logo Numoaura)
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   avatarImage: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      borderWidth: 2,
-      borderColor: COLORS.primary
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: COLORS.primary
   },
   imageActions: {
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
   },
   actionBtnCircle: {
-      backgroundColor: COLORS.black, // Botão preto para contraste
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: COLORS.dark,
+    backgroundColor: COLORS.black, // Botão preto para contraste
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.dark,
   },
   avatarHint: {
-      color: COLORS.textSecondary,
-      fontSize: 12,
-      fontFamily: 'Inter_400Regular'
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular'
   },
   urlInputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      width: '100%',
-      gap: 8,
-      marginBottom: SPACING.s
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    gap: 8,
+    marginBottom: SPACING.s
   },
   urlInputWrapper: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#1E1E1E',
-      borderRadius: BORDER_RADIUS.m,
-      height: 44,
-      borderWidth: 1,
-      borderColor: '#333'
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    borderRadius: BORDER_RADIUS.m,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#333'
   },
   urlInput: {
-      flex: 1,
-      paddingHorizontal: SPACING.s,
-      height: '100%',
-      fontSize: 12,
-      fontFamily: 'Inter_400Regular',
-      color: COLORS.white
+    flex: 1,
+    paddingHorizontal: SPACING.s,
+    height: '100%',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    color: COLORS.white
   },
   applyUrlBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: COLORS.primary,
-      justifyContent: 'center',
-      alignItems: 'center'
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   cancelUrlBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: '#333',
-      justifyContent: 'center',
-      alignItems: 'center'
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   form: {
     gap: SPACING.l,

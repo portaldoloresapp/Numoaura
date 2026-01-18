@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityInd
 import { useRouter, Link } from 'expo-router';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
 import { supabase } from '../../lib/supabase';
-import { Mail, Lock, ArrowRight, Command } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, Command, Eye, EyeOff } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import AnimatedTouchable from '../../components/AnimatedTouchable';
@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Referência para o campo de senha
   const passwordRef = useRef<TextInput>(null);
@@ -105,10 +106,17 @@ export default function LoginScreen() {
                 placeholderTextColor={COLORS.textSecondary}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 returnKeyType="go"
                 onSubmitEditing={handleLogin}
               />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? (
+                  <EyeOff size={20} color={COLORS.textSecondary} />
+                ) : (
+                  <Eye size={20} color={COLORS.textSecondary} />
+                )}
+              </TouchableOpacity>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(400).duration(800).springify()}>

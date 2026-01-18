@@ -1,5 +1,5 @@
 export const COLORS = {
-  primary: '#D4FC79', // Vibrant Lime Green from image
+  primary: '#285c4d', // Novo verde solicitado pelo usuário
   primaryDark: '#96E6A1',
   dark: '#121212', // Deep Black
   cardBlack: '#1E1E1E',

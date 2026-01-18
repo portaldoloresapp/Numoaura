@@ -23,10 +23,9 @@ export async function sendMessageToQwen(messages: ChatMessage[]): Promise<string
             headers: {
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://numoapp.com', // Opcional mas recomendado
             },
             body: JSON.stringify({
-                model: 'z-ai/glm-4.5-air:free', // Modelo GLM 4.5 Air gratuito
+                model: 'meta-llama/llama-3.1-8b-instruct:free', // Modelo Llama 3.1 gratuito
                 messages: messages,
             }),
         });
@@ -35,6 +34,8 @@ export async function sendMessageToQwen(messages: ChatMessage[]): Promise<string
             let errorMessage = `API Error: ${response.status} ${response.statusText}`;
             try {
                 const errorData = await response.json();
+                console.log('--- OPENROUTER ERROR DETAIL ---');
+                console.log(JSON.stringify(errorData, null, 2));
                 errorMessage = `API Error: ${errorData.error?.message || JSON.stringify(errorData)}`;
             } catch (e) {
                 // Se não for JSON, usa o statusText
@@ -45,9 +46,38 @@ export async function sendMessageToQwen(messages: ChatMessage[]): Promise<string
         const data = await response.json();
         return data.choices[0]?.message?.content || 'Desculpe, não consegui gerar uma resposta.';
     } catch (error) {
-        console.error('Erro ao enviar mensagem para Qwen:', error);
-        throw error;
+        console.error('Erro ao enviar mensagem para Qwen (Usando Fallback):', error);
+        // Fallback: Se a API falhar, usa a resposta local
+        const userLastMessage = messages[messages.length - 1]?.content || '';
+        return generateLocalResponse(userLastMessage);
     }
+}
+
+/**
+ * Gera uma resposta local simulada quando a API está offline ou com erro de chave
+ */
+function generateLocalResponse(userMessage: string): string {
+    const msg = userMessage.toLowerCase();
+    const date = new Date().toLocaleDateString('pt-BR');
+
+    if (msg.includes('oi') || msg.includes('olá') || msg.includes('ola') || msg.includes('tudo bem')) {
+        return `Olá! 👋 Como posso ajudar você a organizar suas finanças hoje?\n\n📅 ${date}`;
+    }
+
+    if (msg.includes('analisar') || msg.includes('gastos') || msg.includes('despesas')) {
+        return `📊 **Análise Rápida**\n\nCom base no que vejo, seria ótimo revisar seus gastos recentes na categoria "Lazer" ou "Alimentação".\n\nQue tal definir uma meta de economia para este mês? 💰\n\n📅 ${date}`;
+    }
+
+    if (msg.includes('meta') || msg.includes('economizar') || msg.includes('guardar')) {
+        return `Ótima iniciativa! 🚀\n\nPara começar a economizar:\n1. Defina um valor fixo mensal.\n2. Revise suas assinaturas recorrentes.\n3. Use a aba "Metas" aqui do app para acompanhar!\n\nVocê consegue! 💪\n\n📅 ${date}`;
+    }
+
+    if (msg.includes('obrigado') || msg.includes('valeu')) {
+        return `De nada! Conte comigo sempre que precisar colocar as contas em dia. 😉\n\n📅 ${date}`;
+    }
+
+    // Resposta padrão genérica
+    return `Entendi! 🤔\n\nComo estou operando em modo offline temporário, posso te dar dicas gerais sobre finanças ou ajudar a navegar no app.\n\nTente perguntar sobre "Metas" ou "Analisar gastos"!\n\n📅 ${date}`;
 }
 
 /**

@@ -9,7 +9,6 @@ import AnimatedTouchable from './AnimatedTouchable';
 const actions = [
   { id: 1, label: 'Histórico', icon: History, route: '/(tabs)/history' },
   { id: 2, label: 'Caixinhas', icon: Box, route: '/(tabs)/wallet' },
-  { id: 3, label: 'Avançado', icon: TrendingUp, route: '/(tabs)/statistics' },
   { id: 4, label: 'Menu', icon: MoreHorizontal, route: '/(tabs)/menu' },
 ];
 
@@ -20,21 +19,21 @@ export default function ActionGrid() {
     <View style={styles.container}>
       {actions.map((action, index) => (
         <Animated.View
-            key={action.id}
-            entering={FadeInDown.delay(index * 100).springify()}
-            layout={Layout.springify()}
+          key={action.id}
+          entering={FadeInDown.delay(index * 100).springify()}
+          layout={Layout.springify()}
         >
-            <AnimatedTouchable 
-              style={styles.actionItem}
-              onPress={() => router.push(action.route as any)}
-            >
-              <View style={styles.iconCircle}>
-                <action.icon size={24} color={COLORS.black} />
-              </View>
-              <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
-                {action.label}
-              </Text>
-            </AnimatedTouchable>
+          <AnimatedTouchable
+            style={styles.actionItem}
+            onPress={() => router.push(action.route as any)}
+          >
+            <View style={styles.iconCircle}>
+              <action.icon size={24} color={COLORS.black} />
+            </View>
+            <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit>
+              {action.label}
+            </Text>
+          </AnimatedTouchable>
         </Animated.View>
       ))}
     </View>

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, SafeAreaView, Platform, TouchableOpacity, RefreshControl, Modal } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '../../constants/theme';
-import { LayoutGrid, SlidersHorizontal, Plus, CalendarDays, ChevronDown } from 'lucide-react-native';
+import { LayoutGrid, SlidersHorizontal, Plus, CalendarDays, ChevronDown, MessageCircle } from 'lucide-react-native';
 import SummaryCard from '../../components/SummaryCard';
 import RecentActivity from '../../components/RecentActivity';
 import ActionGrid from '../../components/ActionGrid';
@@ -153,12 +153,7 @@ export default function HomeScreen() {
                 >
                   <LayoutGrid size={24} color={COLORS.black} />
                 </AnimatedTouchable>
-                <AnimatedTouchable
-                  style={styles.iconBtn}
-                  onPress={() => router.push('/settings/home-config')}
-                >
-                  <SlidersHorizontal size={24} color={COLORS.black} />
-                </AnimatedTouchable>
+                {/* Modo avançado removido conforme solicitado */}
               </View>
 
               <View style={styles.rightHeader}>
@@ -191,6 +186,27 @@ export default function HomeScreen() {
                 <ChevronDown size={14} color={COLORS.textSecondary} style={{ marginLeft: -4 }} />
               </AnimatedTouchable>
               <Text style={styles.welcomeText}>Olá, {user?.user_metadata?.full_name?.split(' ')[0] || 'Usuário'}</Text>
+            </Animated.View>
+
+            {/* Numo AI Card - Destaque na Tela Inicial */}
+            <Animated.View entering={FadeInDown.delay(150).duration(600).springify()} style={{ marginBottom: SPACING.m }}>
+              <AnimatedTouchable
+                style={styles.aiCard}
+                onPress={() => router.push('/(tabs)/chatbot')}
+              >
+                <View style={styles.aiContent}>
+                  <View style={styles.aiIconContainer}>
+                    <MessageCircle size={24} color={COLORS.white} />
+                  </View>
+                  <View>
+                    <Text style={styles.aiTitle}>Numo AI</Text>
+                    <Text style={styles.aiSubtitle}>Fale com seu assistente inteligente</Text>
+                  </View>
+                </View>
+                <View style={styles.aiBadge}>
+                  <Text style={styles.aiBadgeText}>Online</Text>
+                </View>
+              </AnimatedTouchable>
             </Animated.View>
 
             {/* Main Summary Card */}
@@ -415,5 +431,57 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  // AI Card Styles
+  aiCard: {
+    backgroundColor: COLORS.black,
+    borderRadius: 24,
+    padding: SPACING.m,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  aiContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: COLORS.white,
+    marginBottom: 2,
+  },
+  aiSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  aiBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  aiBadgeText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 10,
+    color: COLORS.white,
   }
 });

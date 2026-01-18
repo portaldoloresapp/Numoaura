@@ -10,10 +10,11 @@ import {
     Platform,
     ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageCircle, Send, Sparkles } from 'lucide-react-native';
+import { MessageCircle, Send, Sparkles, Trash2 } from 'lucide-react-native';
 import ChatMessage from '../../components/ChatMessage';
-import { sendMessageToQwen, getSystemMessage, ChatMessage as ChatMessageType, generateFinancialInsights } from '../../lib/openrouter';
+import { sendMessageToGemini, formatMessageForGemini, ChatMessage as GeminiMessage } from '../../lib/gemini';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Transaction } from '../../types';
@@ -21,10 +22,50 @@ import { COLORS } from '../../constants/theme';
 
 export default function ChatBot() {
     const { user } = useAuth();
-    const [messages, setMessages] = useState<ChatMessageType[]>([getSystemMessage()]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    // Carregar histórico ao iniciar
+    React.useEffect(() => {
+        loadHistory();
+    }, []);
+
+    // Salvar histórico sempre que mudar
+    React.useEffect(() => {
+        if (messages.length > 0) {
+            saveHistory(messages);
+        }
+    }, [messages]);
+
+    const loadHistory = async () => {
+        try {
+            const saved = await AsyncStorage.getItem('@chat_history');
+            if (saved) {
+                setMessages(JSON.parse(saved));
+            }
+        } catch (error) {
+            console.log('Erro ao carregar histórico', error);
+        }
+    };
+
+    const saveHistory = async (msgs: any[]) => {
+        try {
+            await AsyncStorage.setItem('@chat_history', JSON.stringify(msgs));
+        } catch (error) {
+            console.log('Erro ao salvar histórico', error);
+        }
+    };
+
+    const clearHistory = async () => {
+        try {
+            await AsyncStorage.removeItem('@chat_history');
+            setMessages([]);
+        } catch (error) {
+            console.log('Erro ao limpar', error);
+        }
+    };
 
     const handleSend = async () => {
         if (!inputText.trim() || isLoading) return;
@@ -41,11 +82,14 @@ export default function ChatBot() {
         setIsLoading(true);
 
         try {
+            // Prepara o histórico para o Gemini (converte o formato das mensagens)
+            const history = updatedMessages.slice(0, -1).map(msg => formatMessageForGemini(msg.role, msg.content));
+
             // Envia para a API
-            const response = await sendMessageToQwen(updatedMessages);
+            const response = await sendMessageToGemini(history, inputText.trim());
 
             // Adiciona resposta do assistente
-            const assistantMessage: ChatMessageType = {
+            const assistantMessage = {
                 role: 'assistant',
                 content: response,
             };
@@ -58,9 +102,15 @@ export default function ChatBot() {
             }, 100);
         } catch (error: any) {
             console.error('Erro ao enviar mensagem:', error);
-            const errorMessage: ChatMessageType = {
+            let errorMsg = 'Ocorreu um erro ao processar sua mensagem.';
+
+            if (error.message.includes('Chave de API')) {
+                errorMsg = '⚠️ Configuração Necessária: Adicione sua chave do Google Gemini no arquivo .env (EXPO_PUBLIC_GEMINI_API_KEY).\n\nPegue sua chave grátis em: aistudio.google.com/app/apikey';
+            }
+
+            const errorMessage = {
                 role: 'assistant',
-                content: `Erro: ${error.message || 'Ocorreu um erro ao processar sua mensagem.'}`,
+                content: errorMsg,
             };
             setMessages([...updatedMessages, errorMessage]);
         } finally {
@@ -89,13 +139,21 @@ export default function ChatBot() {
 
             if (error) throw error;
 
-            // 2. Gerar insights
-            const insights = await generateFinancialInsights(transactions as Transaction[]);
+            // 2. Gerar prompt de análise
+            const summary = transactions?.map((t: any) =>
+                `- ${new Date(t.created_at).toLocaleDateString()}: ${t.description || t.category} (R$ ${t.amount}) [${t.type}]`
+            ).join('\n') || "Sem transações recentes.";
+
+            const analysisPrompt = `Analise estas transações financeiras e me dê 3 dicas de economia:\n${summary}`;
+
+            const history = messages.map(msg => formatMessageForGemini(msg.role, msg.content));
+            const response = await sendMessageToGemini(history, analysisPrompt);
+
 
             // 3. Adicionar resposta da IA
-            const aiResponse: ChatMessageType = {
+            const aiResponse = {
                 role: 'assistant',
-                content: insights
+                content: response
             };
 
             setMessages([...updatedMessages, aiResponse]);
@@ -129,8 +187,17 @@ export default function ChatBot() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <MessageCircle size={24} color="#007AFF" />
-                    <Text style={styles.headerTitle}>Chat AI</Text>
+                    <View style={styles.headerLeft}>
+                        <MessageCircle size={24} color={COLORS.primary} />
+                        <Text style={styles.headerTitle}>Numo AI</Text>
+                    </View>
+                    <View style={styles.statusBadge}>
+                        <View style={styles.statusDot} />
+                        <Text style={styles.statusText}>Online</Text>
+                    </View>
+                    <TouchableOpacity onPress={clearHistory} style={styles.clearBtn}>
+                        <Trash2 size={20} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Messages */}
@@ -139,6 +206,7 @@ export default function ChatBot() {
                     style={styles.messagesContainer}
                     contentContainerStyle={styles.messagesContent}
                     onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                    showsVerticalScrollIndicator={false}
                 >
                     {displayMessages.length === 0 ? (
                         <View style={styles.emptyState}>
@@ -161,8 +229,8 @@ export default function ChatBot() {
                     )}
                 </ScrollView>
 
-                {/* Input */}
-                <View style={styles.inputContainer}>
+                {/* Input Area */}
+                <View style={styles.footerContainer}>
                     {messages.length === 1 && (
                         <TouchableOpacity
                             style={styles.suggestionBtn}
@@ -170,7 +238,7 @@ export default function ChatBot() {
                             disabled={isLoading}
                         >
                             <Sparkles size={16} color={COLORS.primary} />
-                            <Text style={styles.suggestionText}>Analisar Gastos</Text>
+                            <Text style={styles.suggestionText}>Analisar meus gastos</Text>
                         </TouchableOpacity>
                     )}
 
@@ -179,8 +247,8 @@ export default function ChatBot() {
                             style={styles.input}
                             value={inputText}
                             onChangeText={setInputText}
-                            placeholder="Digite sua mensagem..."
-                            placeholderTextColor="#8E8E93"
+                            placeholder="Pergunte qualquer coisa..."
+                            placeholderTextColor={COLORS.textSecondary}
                             multiline
                             maxLength={1000}
                             editable={!isLoading}
@@ -190,7 +258,11 @@ export default function ChatBot() {
                             onPress={handleSend}
                             disabled={!inputText.trim() || isLoading}
                         >
-                            <Send size={20} color={!inputText.trim() || isLoading ? '#C7C7CC' : '#FFFFFF'} />
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color="#FFF" />
+                            ) : (
+                                <Send size={20} color="#FFFFFF" />
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -202,7 +274,7 @@ export default function ChatBot() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F2F2F7',
+        backgroundColor: COLORS.dark,
     },
     keyboardView: {
         flex: 1,
@@ -210,25 +282,52 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         paddingVertical: 16,
         paddingHorizontal: 20,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#1E1E1E',
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
-        gap: 8,
+        borderBottomColor: '#333',
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: '600',
-        color: '#000000',
+        fontFamily: 'Inter_700Bold',
+        color: COLORS.white,
+    },
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 6,
+    },
+    statusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#4ADE80',
+    },
+    statusText: {
+        fontSize: 12,
+        color: '#4ADE80',
+        fontFamily: 'Inter_600SemiBold',
+    },
+    clearBtn: {
+        padding: 4,
     },
     messagesContainer: {
         flex: 1,
     },
     messagesContent: {
-        paddingVertical: 16,
-        paddingBottom: 32, // Espaço extra no final das mensagens
+        paddingVertical: 20,
+        paddingBottom: 140, // Aumentei o padding inferior da lista para compensar a área de input flutuante
         flexGrow: 1,
     },
     emptyState: {
@@ -239,15 +338,16 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 20,
-        fontWeight: '600',
-        color: '#000000',
+        fontFamily: 'Inter_700Bold',
+        color: COLORS.white,
         marginTop: 16,
     },
     emptySubtext: {
         fontSize: 16,
-        color: '#8E8E93',
+        color: COLORS.textSecondary,
         marginTop: 8,
         textAlign: 'center',
+        fontFamily: 'Inter_400Regular',
     },
     loadingContainer: {
         flexDirection: 'row',
@@ -258,61 +358,82 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 14,
-        color: '#8E8E93',
+        color: COLORS.textSecondary,
+        fontFamily: 'Inter_400Regular',
     },
-    inputContainer: {
-        flexDirection: 'column',
+    footerContainer: {
         paddingHorizontal: 16,
         paddingTop: 12,
-        paddingBottom: Platform.OS === 'ios' ? 120 : 110, // Espaço para a BottomNavBar (70px + margens)
-        backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: '#E5E5EA',
+        paddingBottom: Platform.OS === 'ios' ? 120 : 110, // Aumentei para subir mais (afastar da bottom bar)
+        backgroundColor: 'transparent', // Removido o fundo cinza
+        // borderTopWidth: 1, // Removido a borda
+        // borderTopColor: '#333',
         gap: 12,
+        position: 'absolute', // Para garantir que fique sobre o conteúdo se necessário, ou flex se preferir fluxo normal. Mantendo fluxo normal por enquanto mas sem BG.
+        bottom: 0,
+        left: 0,
+        right: 0,
     },
     suggestionBtn: {
         alignSelf: 'flex-start',
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F0F9FF',
+        backgroundColor: 'rgba(163, 255, 0, 0.1)',
         paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 16,
+        paddingHorizontal: 14,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: COLORS.primary,
-        gap: 6,
+        borderColor: 'rgba(163, 255, 0, 0.3)',
+        gap: 8,
     },
     suggestionText: {
-        fontSize: 12,
-        fontWeight: '600',
+        fontSize: 13,
+        fontFamily: 'Inter_600SemiBold',
         color: COLORS.primary
     },
     inputWrapper: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
-        gap: 12,
+        alignItems: 'center',
+        gap: 10,
         width: '100%',
     },
     input: {
         flex: 1,
-        minHeight: 40,
-        maxHeight: 100,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: '#F2F2F7',
-        borderRadius: 20,
+        minHeight: 46,
+        maxHeight: 120,
+        paddingHorizontal: 18,
+        paddingVertical: 12,
+        backgroundColor: 'rgba(30, 30, 30, 0.9)', // Fundo translúcido escuro para o próprio input
+        borderRadius: 30,
         fontSize: 16,
-        color: '#000000',
+        color: COLORS.white,
+        fontFamily: 'Inter_400Regular',
+        borderWidth: 1,
+        borderColor: '#444',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 4.65,
+        elevation: 8,
     },
     sendButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#007AFF',
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: COLORS.primary,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 2,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     sendButtonDisabled: {
-        backgroundColor: '#E5E5EA',
+        backgroundColor: '#333',
+        shadowOpacity: 0,
     },
 });

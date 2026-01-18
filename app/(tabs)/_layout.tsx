@@ -44,7 +44,7 @@ export default function TabLayout() {
       {/* -- ROTAS OCULTAS DA BARRA -- */}
       <Tabs.Screen name="chatbot" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
-      <Tabs.Screen name="statistics" options={{ href: null }} />
+
 
     </Tabs>
   );
